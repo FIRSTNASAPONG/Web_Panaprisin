@@ -1,4 +1,4 @@
-name: web-panaprisin-local
+name: Web_panaprisin
 services:
   frontend:
     build:
