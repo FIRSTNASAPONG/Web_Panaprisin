@@ -1,4 +1,4 @@
-name: Web_panaprisin
+name: Web-Panaprisin
 services:
   frontend:
     build:
@@ -16,9 +16,12 @@ services:
     volumes:
       - ./backend:/var/www/html
     depends_on:
-      - db
-      - cache
-      - search
+      db:
+        condition: service_healthy
+      cache:
+        condition: service_started
+      search:
+        condition: service_started
 
   webserver:
     image: nginx:1.27-alpine
@@ -41,6 +44,11 @@ services:
       - "5432:5432"
     volumes:
       - pgsql_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U dev_user -d panaprisin_db"] # <--- เช็กสถานะว่ารับ Connection ได้หรือยัง
+      interval: 5s
+      timeout: 5s
+      retries: 5
 
   cache:
     image: valkey/valkey:8.1-alpine

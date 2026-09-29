@@ -23,7 +23,6 @@ cd Web_Panaprisin
 ```
 
 **2. ติดตั้ง Dependencies ของ Frontend และ Backend**
-เนื่องจากเราไม่ใช้ Node/PHP ในเครื่อง เราจะสั่งให้ Docker โหลดไลบรารีให้แทน:
 ```bash
 # ฝั่ง Frontend (โหลด node_modules)
 docker compose run --rm frontend npm install
@@ -32,26 +31,30 @@ docker compose run --rm frontend npm install
 docker compose run --rm backend composer install
 ```
 
-**3. ตั้งค่า Environment ฝั่ง Backend**
+**3. ตั้งค่า Environment Variables**
 ```bash
-# คัดลอกไฟล์ .env
+# ฝั่ง Backend
 cp backend/.env.example backend/.env
-
-# สร้าง Application Key ของ Laravel
 docker compose run --rm backend php artisan key:generate
+
+# ฝั่ง Frontend
+cp frontend/.env.example frontend/.env.local
 ```
 
 **4. ปลุกระบบทั้งหมดขึ้นมาทำงาน**
 ```bash
 docker compose up -d
 ```
-> รอประมาณ 15-30 วินาที เพื่อให้ Database และ Service ต่างๆ บูตตัวเองจนเสร็จ
+> Database ถูกตั้งค่า Healthcheck ไว้แล้ว ระบบจะจัดการบูตตามลำดับที่ถูกต้องให้เองโดยอัตโนมัติ
+
+**5. สร้างตารางและข้อมูลจำลองในฐานข้อมูล (รันครั้งแรกครั้งเดียว)**
+```bash
+docker compose exec backend php artisan migrate --seed
+```
 
 ---
 
 ## ช่องทางการเข้าถึง (Services & Ports)
-
-เมื่อระบบรันสมบูรณ์แล้ว สามารถเข้าถึง Service ต่างๆ ได้ตามนี้:
 
 | Service | URL / Port | หน้าที่ |
 | :--- | :--- | :--- |
@@ -61,67 +64,43 @@ docker compose up -d
 | **Meilisearch** | `localhost:7700` | ระบบ Search Engine |
 | **Valkey (Redis)** | `localhost:6379` | Cache & Queue |
 
-> **หมายเหตุสำคัญสำหรับ Frontend:** Nginx ถูกตั้งค่าให้ทำ Reverse Proxy ไว้แล้ว เวลาเรียกใช้ API **ห้าม** ใส่ `http://localhost:8000/api/...` ให้เรียก Path ตรงๆ เป็น `/api/...` ได้เลย เช่น `axios.get('/api/products')` (หมดปัญหา CORS 100%)
-
 ---
 
 ## คู่มือสำหรับทีม Frontend (Next.js)
 
-โค้ดทั้งหมดของคุณจะอยู่ในโฟลเดอร์ `/frontend` เมื่อคุณแก้ไขโค้ดและกด Save หน้าเว็บเบราว์เซอร์จะรีเฟรชให้เองอัตโนมัติ (Hot Reload)
-
-**คำสั่งที่ใช้บ่อย (รันที่โฟลเดอร์นอกสุด `Web_Panaprisin`):**
-
-*   **ติดตั้ง Package เพิ่มเติม:**
-    ```bash
-    docker compose run --rm frontend npm install <package-name>
-    ```
-*   **ดู Log ของ Next.js (เผื่อมี Error):**
-    ```bash
-    docker compose logs -f frontend
-    ```
+*   เมื่อต้องการ Fetch ข้อมูล **ฝั่ง Client (เช่นใน `useEffect`)** ให้ใช้ตัวแปร `process.env.NEXT_PUBLIC_API_URL`
+*   เมื่อต้องการ Fetch ข้อมูล **ฝั่ง Server (Server Components)** ให้ใช้ตัวแปร `process.env.INTERNAL_API_URL`
+*   **ติดตั้ง Package เพิ่มเติม:** `docker compose run --rm frontend npm install <package-name>`
+*   **ดู Log ของ Next.js:** `docker compose logs -f frontend`
 
 ---
 
 ## คู่มือสำหรับทีม Backend (Laravel)
 
-โค้ดทั้งหมดของคุณจะอยู่ในโฟลเดอร์ `/backend`
-
-**ข้อมูลสำหรับต่อ Database (ผ่านโปรแกรมอย่าง DBeaver หรือ TablePlus):**
-*   **Host:** `localhost`
-*   **Port:** `5432`
+**ข้อมูลสำหรับต่อ Database (ผ่าน DBeaver):**
+*   **Host:** `localhost` (Port: `5432`)
 *   **Database:** `panaprisin_db`
-*   **Username:** `dev_user`
-*   **Password:** `dev_password`
+*   **Username:** `dev_user` | **Password:** `dev_password`
 
-**คำสั่งที่ใช้บ่อย (รันที่โฟลเดอร์นอกสุด `Web_Panaprisin`):**
-เนื่องจากเราไม่มี PHP ในเครื่อง ทุกครั้งที่จะใช้ `php artisan` หรือ `composer` ให้รันผ่าน `docker compose exec backend ...` เสมอ
-
-*   **รัน Migration และ Seeder:**
-    ```bash
-    docker compose exec backend php artisan migrate:fresh --seed
-    ```
-*   **สร้าง Controller / Model:**
-    ```bash
-    docker compose exec backend php artisan make:model Product -mc
-    ```
-*   **ลง Composer Package เพิ่ม:**
-    ```bash
-    docker compose exec backend composer require <package-name>
-    ```
-*   **ดู Log ของ Laravel:**
-    ```bash
-    docker compose logs -f backend
-    ```
+**คำสั่งที่ใช้บ่อย (รันที่โฟลเดอร์หน้าสุด):**
+*   **รัน Migration:** `docker compose exec backend php artisan migrate`
+*   **สร้าง Controller:** `docker compose exec backend php artisan make:controller ProductController`
+*   **ลง Package เพิ่ม:** `docker compose exec backend composer require <package-name>`
 
 ---
 
-## การปิดระบบและการเคลียร์ข้อมูล
+## หมวดแก้ปัญหาเบื้องต้น (Troubleshooting)
 
-*   **ปิดระบบชั่วคราว (แต่ยังเก็บ Database ไว้):**
+**ปัญหา: VS Code แจ้งว่าเซฟไฟล์ไม่ได้ (Permission Denied) หรือลบไฟล์ไม่ได้**
+*   **สาเหตุ:** เนื่องจาก Docker เป็นผู้สร้างไฟล์ `node_modules` หรือ `vendor` สิทธิ์การจัดการไฟล์จึงตกไปอยู่ที่ Root ของระบบ
+*   **วิธีแก้ (สำหรับ Mac/Linux):** รันคำสั่งนี้ใน Terminal เพื่อดึงสิทธิ์การแก้ไขไฟล์กลับมาที่ตัวคุณ
     ```bash
-    docker compose down
+    sudo chown -R $USER:$USER .
     ```
-*   **ปิดระบบและ ล้างข้อมูล Database ทิ้งทั้งหมด (ล้าง Volume):**
+
+**ปัญหา: กดรัน `docker compose up -d` แล้ว Database หรือ Backend พัง**
+*   **วิธีล้างไพ่เริ่มต้นใหม่แบบสะอาด 100%:**
     ```bash
     docker compose down -v
+    docker compose up -d
     ```
