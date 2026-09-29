@@ -1,0 +1,62 @@
+name: web-panaprisin-local
+services:
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile.dev
+    volumes:
+      - ./frontend:/app
+    ports:
+      - "3000:3000"
+
+  backend:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile.dev
+    volumes:
+      - ./backend:/var/www/html
+    depends_on:
+      - db
+      - cache
+      - search
+
+  webserver:
+    image: nginx:1.27-alpine
+    ports:
+      - "80:80"
+    volumes:
+      - ./backend:/var/www/html
+      - ./docker/nginx/default.conf:/etc/nginx/conf.d/default.conf
+    depends_on:
+      - frontend
+      - backend
+
+  db:
+    image: postgres:17-alpine
+    environment:
+      POSTGRES_DB: panaprisin_db
+      POSTGRES_USER: dev_user
+      POSTGRES_PASSWORD: dev_password
+    ports:
+      - "5432:5432"
+    volumes:
+      - pgsql_data:/var/lib/postgresql/data
+
+  cache:
+    image: valkey/valkey:8.1-alpine
+    ports:
+      - "6379:6379"
+
+  search:
+    image: getmeili/meilisearch:v1.11
+    environment:
+      - MEILI_ENV=development
+      - MEILI_NO_ANALYTICS=true
+    ports:
+      - "7700:7700"
+    volumes:
+      - meili_data:/meili_data
+
+volumes:
+  pgsql_data:
+  meili_data:

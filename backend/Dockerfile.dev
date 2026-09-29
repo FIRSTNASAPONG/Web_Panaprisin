@@ -1,0 +1,9 @@
+FROM php:8.3-fpm-alpine
+# ติดตั้งเครื่องมือและ Driver สำหรับ PostgreSQL
+RUN apk add --no-cache libpq-dev zip unzip \
+    && docker-php-ext-install pdo_pgsql bcmath
+# เอา Composer มาใช้ติดตั้ง Laravel
+COPY --from=composer:latest /usr/bin/composer /usr/bin/composer
+WORKDIR /var/www/html
+EXPOSE 9000
+CMD ["php-fpm"]
