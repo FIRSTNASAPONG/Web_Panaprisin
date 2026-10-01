@@ -1,8 +1,58 @@
 "use client";
 
-import React from 'react';
+import React, { useState } from 'react';
+import { useRouter } from 'next/navigation'; 
 
 export default function LoginPage() {
+  // สร้าง State สำหรับเก็บค่าจากช่อง Input
+  const [email, setEmail] = useState('');
+  const [password, setPassword] = useState('');
+  const [errorMessage, setErrorMessage] = useState('');
+  
+  const router = useRouter();
+
+  // ฟังก์ชันจัดการเมื่อกดปุ่ม "เข้าสู่ระบบ"
+  const handleLogin = async (e: React.FormEvent) => {
+    e.preventDefault(); // ป้องกันไม่ให้หน้าเว็บรีเฟรช
+    setErrorMessage(''); // เคลียร์ข้อความแจ้งเตือน
+
+    try {
+      // ยิง API ไปที่ Backend Laravel
+      const res = await fetch('http://localhost/api/login', {
+        method: 'POST',
+        headers: { 
+          'Content-Type': 'application/json',
+          'Accept': 'application/json'
+        },
+        // ส่ง email และ password ไปให้ API
+        body: JSON.stringify({ email, password })
+      });
+      
+      const data = await res.json();
+      
+      if (res.ok) {
+        // หากล็อกอินสำเร็จ: เก็บ Token ลงใน localStorage ของเบราว์เซอร์
+        localStorage.setItem('token', data.access_token);
+        localStorage.setItem('user', JSON.stringify(data.user));
+        
+        alert('เข้าสู่ระบบสำเร็จ!');
+        
+        // เช็ค Role เพื่อเปลี่ยนหน้า (ถ้าเป็น seller ไปหน้า seller, ถ้าเป็น buyer ไปหน้าแรก)
+        if (data.user.role === 'seller') {
+          router.push('/seller');
+        } else {
+          router.push('/');
+        }
+      } else {
+        // หากล็อกอินไม่สำเร็จ (พาสเวิร์ดผิด, ไม่มีเมล)
+        setErrorMessage(data.message || 'อีเมลหรือรหัสผ่านไม่ถูกต้อง');
+      }
+    } catch (error) {
+      console.error('Login error:', error);
+      setErrorMessage('ไม่สามารถเชื่อมต่อกับเซิร์ฟเวอร์ได้');
+    }
+  };
+
   return (
     <div className="min-h-screen bg-[#f5f5f5] flex flex-col font-sans">
       {/* Header */}
@@ -10,7 +60,7 @@ export default function LoginPage() {
         <div className="container mx-auto px-4 max-w-5xl flex justify-between items-center">
           <div className="flex items-center gap-4">
             <a href="/" className="text-3xl font-bold text-[#1B4D3E] tracking-wider hover:opacity-90">พณาไพรสิน</a>
-            <span className="text-2xl text-gray-800 font-medium text-xl md:text-2xl">เข้าสู่ระบบ</span>
+            <span className="text-2xl text-gray-800 font-medium md:text-2xl">เข้าสู่ระบบ</span>
           </div>
         </div>
       </header>
@@ -32,24 +82,39 @@ export default function LoginPage() {
           <div className="w-full max-w-[400px] bg-white rounded-sm shadow-xl p-8">
             <h2 className="text-xl text-gray-900 font-bold mb-6">เข้าสู่ระบบ</h2>
             
-            <form className="space-y-4">
+            {/* แสดงข้อความ Error ถ้ามี */}
+            {errorMessage && (
+              <div className="bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded relative mb-4 text-sm font-medium">
+                {errorMessage}
+              </div>
+            )}
+            
+            {/* ผูกฟังก์ชัน handleLogin กับฟอร์ม */}
+            <form className="space-y-4" onSubmit={handleLogin}>
               <div>
+                {/* เปลี่ยนเป็นช่องกรอก Email ให้ตรงกับ API Backend */}
                 <input 
-                  type="text" 
-                  placeholder="ชื่อผู้ใช้ (Username)" 
+                  type="email" 
+                  value={email}
+                  onChange={(e) => setEmail(e.target.value)}
+                  placeholder="อีเมล (Email)" 
+                  required
                   className="w-full px-4 py-3 border border-gray-400 rounded-sm focus:outline-none focus:border-[#1B4D3E] text-sm text-gray-900 placeholder-gray-500 font-medium"
                 />
               </div>
               <div>
                 <input 
                   type="password" 
+                  value={password}
+                  onChange={(e) => setPassword(e.target.value)}
                   placeholder="รหัสผ่าน (Password)" 
+                  required
                   className="w-full px-4 py-3 border border-gray-400 rounded-sm focus:outline-none focus:border-[#1B4D3E] text-sm text-gray-900 placeholder-gray-500 font-medium"
                 />
               </div>
               
               <button 
-                type="button"
+                type="submit"
                 className="w-full bg-[#1B4D3E] text-white py-3 rounded-sm font-bold hover:bg-[#143a2f] transition shadow-sm uppercase mt-2"
               >
                 เข้าสู่ระบบ

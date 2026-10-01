@@ -1,8 +1,30 @@
 "use client";
 
-import React from 'react';
+import React, { useEffect, useState } from 'react';
+import { useRouter } from 'next/navigation';
 
 export default function SellerCentrePage() {
+  const router = useRouter();
+  // สร้าง State สำหรับเก็บชื่อผู้ดูแลระบบที่ดึงมาจาก LocalStorage
+  const [adminName, setAdminName] = useState('ผู้ดูแลระบบ');
+
+  // เช็คสิทธิ์การเข้าถึงทันทีที่เปิดหน้านี้
+  useEffect(() => {
+    // ดึงข้อมูล User จาก LocalStorage (ถ้าไม่มีให้เป็น object เปล่าๆ)
+    const userString = localStorage.getItem('user');
+    const user = userString ? JSON.parse(userString) : null;
+    const token = localStorage.getItem('token');
+
+    // ถ้าไม่มี Token, ไม่มี User, หรือ Role ไม่ใช่ seller ให้ไล่กลับไปหน้าแรก
+    if (!token || !user || user.role !== 'seller') {
+      alert('เฉพาะผู้ขายเท่านั้นที่สามารถเข้าถึงหน้านี้ได้');
+      router.push('/');
+    } else {
+      // ถ้าเป็น seller ให้เอาชื่อมาแสดงมุมขวาบน
+      setAdminName(user.name);
+    }
+  }, [router]);
+
   return (
     <div className="min-h-screen bg-gray-100 flex font-sans">
       
@@ -21,7 +43,7 @@ export default function SellerCentrePage() {
         <nav className="flex-1 py-4">
           <ul className="space-y-1">
             <li>
-              <a href="#" className="flex items-center gap-3 px-6 py-3 bg-white/10 border-l-4 border-white text-white font-medium">
+              <a href="/seller" className="flex items-center gap-3 px-6 py-3 bg-white/10 border-l-4 border-white text-white font-medium">
                 <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect width="7" height="9" x="3" y="3" rx="1"/><rect width="7" height="5" x="14" y="3" rx="1"/><rect width="7" height="9" x="14" y="12" rx="1"/><rect width="7" height="5" x="3" y="16" rx="1"/></svg>
                 แดชบอร์ด
               </a>
@@ -39,6 +61,7 @@ export default function SellerCentrePage() {
               </a>
             </li>
             <li>
+              {/* ลิงก์นี้จะพาไปหน้าฟอร์มเพิ่มสินค้า (ซึ่งเราต้องสร้างไฟล์ page.tsx ในโฟลเดอร์ add-product ต่อไป) */}
               <a href="/seller/add-product" className="flex items-center gap-3 px-6 py-3 text-green-100 hover:bg-white/5 hover:text-white transition">
                 <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="10"/><path d="M8 12h8"/><path d="M12 8v8"/></svg>
                 เพิ่มสินค้าใหม่
@@ -60,6 +83,7 @@ export default function SellerCentrePage() {
         </nav>
 
         <div className="p-6 border-t border-white/10">
+          {/* ปุ่มกลับไปหน้าร้านค้าของลูกค้า */}
           <a href="/" className="flex items-center gap-3 text-green-200 hover:text-white transition text-sm">
             <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" x2="9" y1="12" y2="12"/></svg>
             กลับสู่หน้าร้านค้า
@@ -79,19 +103,22 @@ export default function SellerCentrePage() {
               <span className="absolute top-1 right-1 w-2.5 h-2.5 bg-red-500 rounded-full border-2 border-white"></span>
             </button>
             <div className="flex items-center gap-2 border-l pl-4 border-gray-300">
-              <div className="w-8 h-8 bg-gray-200 rounded-full overflow-hidden">
-                <img src="https://placehold.co/100x100/1B4D3E/FFFFFF?text=Admin" alt="Admin" />
+              <div className="w-8 h-8 bg-[#1B4D3E] text-white flex items-center justify-center rounded-full font-bold text-sm">
+                {/* เอาตัวอักษรตัวแรกของชื่อมาโชว์เป็นรูปโปรไฟล์ */}
+                {adminName.charAt(0).toUpperCase()}
               </div>
-              <span className="text-sm font-medium text-gray-700">ผู้ดูแลระบบ</span>
+              {/* แสดงชื่อคนที่ล็อกอินอยู่ */}
+              <span className="text-sm font-medium text-gray-700">{adminName}</span>
             </div>
           </div>
         </header>
 
-        {/* Dashboard Content */}
+        {/* Dashboard Content (โค้ด Card สถิติและ Table ของเดิมของเพื่อน) */}
         <div className="flex-1 overflow-y-auto p-8">
           
           {/* Stats Cards */}
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
+            {/* ... โค้ด Card ยอดขายวันนี้ ของเดิม ... */}
             <div className="bg-white p-6 rounded-lg shadow-sm border border-gray-100 flex items-center gap-4">
               <div className="w-14 h-14 bg-green-100 text-[#1B4D3E] rounded-full flex items-center justify-center">
                 <svg xmlns="http://www.w3.org/2000/svg" width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M12 2v20"/><path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/></svg>
@@ -102,6 +129,7 @@ export default function SellerCentrePage() {
               </div>
             </div>
             
+            {/* ... โค้ด Card คำสั่งซื้อ ของเดิม ... */}
             <div className="bg-white p-6 rounded-lg shadow-sm border border-gray-100 flex items-center gap-4">
               <div className="w-14 h-14 bg-blue-100 text-blue-600 rounded-full flex items-center justify-center">
                 <svg xmlns="http://www.w3.org/2000/svg" width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M6 2 3 6v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V6l-3-4Z"/><path d="M3 6h18"/><path d="M16 10a4 4 0 0 1-8 0"/></svg>
@@ -112,6 +140,7 @@ export default function SellerCentrePage() {
               </div>
             </div>
 
+            {/* ... โค้ด Card สินค้าทั้งหมด ของเดิม ... */}
             <div className="bg-white p-6 rounded-lg shadow-sm border border-gray-100 flex items-center gap-4">
               <div className="w-14 h-14 bg-purple-100 text-purple-600 rounded-full flex items-center justify-center">
                 <svg xmlns="http://www.w3.org/2000/svg" width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="m7.5 4.27 9 5.15"/><path d="M21 8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16Z"/><path d="m3.3 7 8.7 5 8.7-5"/><path d="M12 22V12"/></svg>
@@ -122,6 +151,7 @@ export default function SellerCentrePage() {
               </div>
             </div>
 
+            {/* ... โค้ด Card สินค้าหมดสต็อก ของเดิม ... */}
             <div className="bg-white p-6 rounded-lg shadow-sm border border-gray-100 flex items-center gap-4">
               <div className="w-14 h-14 bg-red-100 text-red-600 rounded-full flex items-center justify-center">
                 <svg xmlns="http://www.w3.org/2000/svg" width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>

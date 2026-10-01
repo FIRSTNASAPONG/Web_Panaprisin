@@ -1,8 +1,9 @@
 "use client";
 
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import Navbar from '../components/Navbar';
 import Footer from '../components/Footer';
+import { useCart } from '../context/CartContext';
 
 const MOCK_CATEGORIES = [
   { id: 1, name: 'พระเครื่อง', icon: <svg xmlns="http://www.w3.org/2000/svg" width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="text-[#1B4D3E]"><path d="M6 3h12l4 6-10 13L2 9Z"/><path d="M11 3 8 9l4 13 4-13-3-6"/><path d="M2 9h20"/></svg> },
@@ -15,22 +16,26 @@ const MOCK_CATEGORIES = [
   { id: 8, name: 'เครื่องดนตรีโบราณ', icon: <svg xmlns="http://www.w3.org/2000/svg" width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="text-[#1B4D3E]"><path d="M2 9a3 3 0 0 1 0 6v2a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2v-2a3 3 0 0 1 0-6V7a2 2 0 0 0-2-2H4a2 2 0 0 0-2 2Z"/><path d="M13 5v2"/><path d="M13 17v2"/><path d="M13 11v2"/></svg> },
 ];
 
-const MOCK_PRODUCTS = [
-  { id: 1, name: 'พระสมเด็จวัดระฆัง พิมพ์ใหญ่', price: 1500000, sold: 1, image: 'https://placehold.co/400x400/1B4D3E/FFFFFF?text=Amulet' },
-  { id: 2, name: 'สิงห์ทองเหลืองโบราณ คู่', price: 8500, sold: 4, image: 'https://placehold.co/400x400/1B4D3E/FFFFFF?text=Brass+Lion' },
-  { id: 3, name: 'ตู้ไม้สักแกะสลัก ลายไทย', price: 25000, sold: 2, image: 'https://placehold.co/400x400/1B4D3E/FFFFFF?text=Teak+Cabinet' },
-  { id: 4, name: 'เหรียญ ร.5 รัชมังคลาภิเศก', price: 12000, sold: 8, image: 'https://placehold.co/400x400/1B4D3E/FFFFFF?text=Coin' },
-  { id: 5, name: 'ชามเบญจรงค์ สมัยอยุธยา', price: 45000, sold: 1, image: 'https://placehold.co/400x400/1B4D3E/FFFFFF?text=Benjarong' },
-  { id: 6, name: 'ตะกรุดหลวงพ่อเดิม วัดหนองโพ', price: 35000, sold: 3, image: 'https://placehold.co/400x400/1B4D3E/FFFFFF?text=Takrut' },
-];
-
 export default function App() {
+  const [products, setProducts] = useState<any[]>([]);
+  const { addToCart } = useCart(); // ดึงฟังก์ชันเพิ่มลงตะกร้ามาใช้
+
+  // ดึงข้อมูลสินค้าจริงจาก Backend เมื่อเปิดหน้าแรก
+  useEffect(() => {
+    fetch('http://localhost/api/products', {
+      headers: {
+        'Accept': 'application/json'
+      }
+    })
+      .then(res => res.json())
+      .then(data => setProducts(data))
+      .catch(err => console.error('Failed to fetch products:', err));
+  }, []);
+
   return (
     <div className="min-h-screen bg-[#f5f5f5] font-sans flex flex-col">
-      {/* ดึง Navbar มาใช้บรรทัดเดียวจบ! */}
       <Navbar />
 
-      {/* Main Content */}
       <main className="container mx-auto px-4 py-6 max-w-6xl flex-grow">
         {/* Banner Section */}
         <div className="bg-[#1B4D3E] rounded-sm mb-6 relative overflow-hidden">
@@ -74,26 +79,51 @@ export default function App() {
         </div>
         
         <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-6 gap-2 md:gap-4">
-          {MOCK_PRODUCTS.map((product) => (
-            <a href={`/product/${product.id}`} key={product.id} className="block">
+          {products.map((product) => (
+            <a href={`/product/${product.id}`} key={product.id} className="block relative group">
               <div className="bg-white hover:border-[#1B4D3E] border border-transparent hover:shadow-md transition cursor-pointer flex flex-col h-full">
                 <div className="relative pt-[100%]">
-                  <img src={product.image} alt={product.name} className="absolute top-0 left-0 w-full h-full object-cover" />
+                  <img 
+                    src={product.image ? `/${product.image}` : "https://placehold.co/400x400/1B4D3E/FFFFFF?text=Product"} 
+                    alt={product.name} 
+                    className="absolute top-0 left-0 w-full h-full object-cover" 
+                  />
                 </div>
                 <div className="p-2 flex flex-col flex-grow">
                   <div className="text-sm text-gray-800 line-clamp-2 mb-2 min-h-[40px]">{product.name}</div>
                   <div className="mt-auto flex items-center justify-between">
-                    <div className="text-[#1B4D3E] font-bold text-lg">฿{product.price.toLocaleString()}</div>
-                    <div className="text-xs text-gray-500">ขายแล้ว {product.sold}</div>
+                    <div className="text-[#1B4D3E] font-bold text-lg">฿{Number(product.price).toLocaleString()}</div>
+                    
+                    {/* ปุ่มหยิบใส่ตะกร้า */}
+                    <button 
+                      onClick={(e) => {
+                        e.preventDefault(); // ไม่ให้คลิกแล้ววิ่งไปหน้า /product/:id
+                        addToCart({
+                          id: product.id,
+                          name: product.name,
+                          price: Number(product.price),
+                          image: product.image,
+                          quantity: 1
+                        });
+                      }}
+                      className="text-xs bg-[#1B4D3E] text-white px-3 py-1.5 rounded-sm hover:bg-[#143a2f] transition z-10"
+                    >
+                      ใส่ตะกร้า
+                    </button>
                   </div>
                 </div>
               </div>
             </a>
           ))}
         </div>
+
+        {products.length === 0 && (
+          <div className="text-center py-12 text-gray-500 bg-white rounded shadow-sm">
+            ยังไม่มีสินค้าในระบบ
+          </div>
+        )}
       </main>
 
-      {/* ดึง Footer มาใช้บรรทัดเดียวจบ! */}
       <Footer />
     </div>
   );

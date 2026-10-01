@@ -6,7 +6,8 @@ import Footer from '../../components/Footer';
 import { useCart } from '../../context/CartContext';
 
 export default function CartPage() {
-  const { cart } = useCart();
+  // ดึงฟังก์ชันมาใช้ให้หมด
+  const { cart, removeFromCart, clearCart } = useCart();
 
   // คำนวณราคารวมทั้งหมดในตะกร้า
   const totalPrice = cart.reduce((total, item) => total + (item.price * item.quantity), 0);
@@ -45,15 +46,22 @@ export default function CartPage() {
                 </div>
 
                 <div className="divide-y divide-gray-100">
-                  {cart.map((item, index) => (
-                    <div key={index} className="grid grid-cols-1 md:grid-cols-12 gap-4 p-4 items-center">
+                  {cart.map((item) => (
+                    <div key={item.id} className="grid grid-cols-1 md:grid-cols-12 gap-4 p-4 items-center">
                       <div className="col-span-1 md:col-span-6 flex gap-4">
                         <div className="w-20 h-20 bg-gray-100 shrink-0 border border-gray-200">
-                          <img src={item.image} alt={item.name} className="w-full h-full object-cover" />
+                          <img 
+                            src={item.image ? `/${item.image}` : "https://placehold.co/400x400/1B4D3E/FFFFFF?text=Product"} 
+                            alt={item.name} 
+                            className="w-full h-full object-cover" 
+                          />
                         </div>
                         <div className="flex flex-col justify-between py-1">
                           <h3 className="text-sm font-medium text-gray-900 line-clamp-2">{item.name}</h3>
-                          <button className="text-xs text-red-500 font-medium text-left hover:underline w-max">
+                          <button 
+                            onClick={() => removeFromCart(item.id)} // ผูกฟังก์ชันลบ
+                            className="text-xs text-red-500 font-medium text-left hover:underline w-max"
+                          >
                             ลบ
                           </button>
                         </div>
@@ -101,7 +109,13 @@ export default function CartPage() {
                   <p className="text-xs text-gray-500 text-right mt-1">รวมภาษีมูลค่าเพิ่มแล้ว</p>
                 </div>
 
-                <button className="w-full bg-[#1B4D3E] text-white py-3 rounded-sm font-bold hover:bg-[#143a2f] shadow-sm transition uppercase text-sm">
+                <button 
+                  onClick={() => {
+                    alert('จำลองการสั่งซื้อสำเร็จ ขอบคุณครับ!');
+                    clearCart(); // ล้างตะกร้าหลังกดจ่ายเงิน
+                  }}
+                  className="w-full bg-[#1B4D3E] text-white py-3 rounded-sm font-bold hover:bg-[#143a2f] shadow-sm transition uppercase text-sm"
+                >
                   ดำเนินการชำระเงิน
                 </button>
               </div>

@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import { Geist, Geist_Mono } from "next/font/google";
+// @ts-expect-error Next.js handles global CSS imports for the app router.
 import "./globals.css";
 import { CartProvider } from "../context/CartContext"; 
 

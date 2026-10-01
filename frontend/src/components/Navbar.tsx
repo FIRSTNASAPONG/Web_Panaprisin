@@ -1,10 +1,39 @@
 "use client";
 
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import { useCart } from '../context/CartContext';
+import { useRouter } from 'next/navigation'; // เพิ่มบรรทัดนี้สำหรับฟังก์ชัน Logout
 
 export default function Navbar() {
-  const { cartCount } = useCart();
+  const { cart } = useCart(); // เปลี่ยนจาก cartCount เป็นดึง cart มาตรงๆ เพื่อคำนวณชิ้น
+  const router = useRouter();
+
+  // สร้าง State สำหรับเก็บข้อมูล user 
+  const [user, setUser] = useState<any>(null);
+  const [mounted, setMounted] = useState(false); // ป้องกัน Error hydration ของ Next.js
+
+  // คำนวณจำนวนชิ้นทั้งหมดในตะกร้า (เอา quantity มาบวกกัน)
+  const totalItems = cart.reduce((total, item) => total + item.quantity, 0);
+
+  // ดึงข้อมูล User จาก LocalStorage เมื่อโหลดหน้า
+  useEffect(() => {
+    setMounted(true);
+    const userString = localStorage.getItem('user');
+    if (userString) {
+      setUser(JSON.parse(userString));
+    }
+  }, []);
+
+  // ฟังก์ชันกดปุ่มออกจากระบบ
+  const handleLogout = () => {
+    localStorage.removeItem('token');
+    localStorage.removeItem('user');
+    setUser(null);
+    alert('ออกจากระบบสำเร็จ');
+    router.push('/');
+  };
+
+  if (!mounted) return null;
 
   return (
     <>
@@ -14,7 +43,7 @@ export default function Navbar() {
           <div className="flex space-x-4">
             <a href="/seller" className="hover:text-gray-300">Seller Centre</a>
             <span className="border-l border-gray-500"></span>
-            <a href="/seller" className="hover:text-gray-300">เริ่มต้นขายสินค้า</a>
+            <a href="/seller/add-product" className="hover:text-gray-300">เริ่มต้นขายสินค้า</a>
             <span className="border-l border-gray-500"></span>
             <div className="flex items-center space-x-2 hidden sm:flex">
               <span>ติดตามเราบน</span>
@@ -28,9 +57,21 @@ export default function Navbar() {
               <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="10"/><path d="M12 2a14.5 14.5 0 0 0 0 20 14.5 14.5 0 0 0 0-20"/><path d="M2 12h20"/></svg>
               ไทย
             </a>
-            <a href="/signup" className="hover:text-gray-300 font-bold">สมัครใหม่</a>
-            <span className="border-l border-gray-500 h-3"></span>
-            <a href="/login" className="hover:text-gray-300 font-bold">เข้าสู่ระบบ</a>
+            
+            {/* เช็คว่าล็อกอินหรือยัง เพื่อแสดงชื่อหรือปุ่ม Login */}
+            {user ? (
+              <>
+                <span className="font-bold text-green-200 ml-2">สวัสดี, {user.name}</span>
+                <span className="border-l border-gray-500 h-3"></span>
+                <button onClick={handleLogout} className="hover:text-red-300 transition text-sm">ออกจากระบบ</button>
+              </>
+            ) : (
+              <>
+                <a href="/signup" className="hover:text-gray-300 font-bold">สมัครใหม่</a>
+                <span className="border-l border-gray-500 h-3"></span>
+                <a href="/login" className="hover:text-gray-300 font-bold">เข้าสู่ระบบ</a>
+              </>
+            )}
           </div>
         </div>
       </div>
@@ -58,9 +99,10 @@ export default function Navbar() {
             <a href="/cart" className="flex-shrink-0 mr-4 cursor-pointer hover:opacity-80 transition relative block">
               <svg xmlns="http://www.w3.org/2000/svg" width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="8" cy="21" r="1"/><circle cx="19" cy="21" r="1"/><path d="M2.05 2.05h2l2.66 12.42a2 2 0 0 0 2 1.58h9.78a2 2 0 0 0 1.95-1.57l1.65-7.43H5.12"/></svg>
               
-              {cartCount > 0 && (
+              {/* เปลี่ยนมาใช้ตัวแปร totalItems แทน cartCount */}
+              {totalItems > 0 && (
                 <span className="absolute -top-2 -right-2 bg-red-500 text-white text-xs font-bold w-5 h-5 flex items-center justify-center rounded-full border-2 border-[#1B4D3E]">
-                  {cartCount}
+                  {totalItems > 99 ? '99+' : totalItems}
                 </span>
               )}
             </a>

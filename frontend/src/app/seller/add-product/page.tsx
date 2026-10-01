@@ -1,8 +1,70 @@
 "use client";
 
-import React from 'react';
+import React, { useState, useEffect } from 'react';
+import { useRouter } from 'next/navigation';
 
 export default function AddProductPage() {
+  const router = useRouter();
+  
+  // 1. สร้าง State สำหรับเก็บค่าในฟอร์ม
+  const [name, setName] = useState('');
+  const [category, setCategory] = useState('');
+  const [description, setDescription] = useState('');
+  const [price, setPrice] = useState('');
+  const [stock, setStock] = useState('1');
+  const [loading, setLoading] = useState(false);
+
+  // เช็คสิทธิ์ Seller ทันทีที่เข้าหน้า
+  useEffect(() => {
+    const userString = localStorage.getItem('user');
+    const user = userString ? JSON.parse(userString) : null;
+    const token = localStorage.getItem('token');
+
+    if (!token || !user || user.role !== 'seller') {
+      alert('เฉพาะผู้ขายเท่านั้นที่สามารถเพิ่มสินค้าได้');
+      router.push('/');
+    }
+  }, [router]);
+
+  // 2. ฟังก์ชันส่งข้อมูลไปยัง Backend Laravel
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setLoading(true);
+
+    const token = localStorage.getItem('token');
+
+    try {
+      const res = await fetch('http://localhost/api/products', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Accept': 'application/json',
+          'Authorization': `Bearer ${token}` // แนบกุญแจ Token ไปยืนยันตัวตน
+        },
+        body: JSON.stringify({
+          name: name,
+          price: price,
+          // ถ้า Backend มีรองรับ category หรือ description เพิ่ม สามารถส่งไปได้เลย 
+          // (ตอนนี้ Backend รับ name กับ price เป็นหลักครับ)
+        })
+      });
+
+      const data = await res.json();
+
+      if (res.ok) {
+        alert('บันทึกและเผยแพร่สินค้าสำเร็จ!');
+        router.push('/'); // เพิ่มเสร็จพากลับไปดูที่หน้าแรก
+      } else {
+        alert(data.message || 'เกิดข้อผิดพลาดในการบันทึกสินค้า');
+      }
+    } catch (error) {
+      console.error('Error adding product:', error);
+      alert('ไม่สามารถเชื่อมต่อกับเซิร์ฟเวอร์ได้');
+    } finally {
+      setLoading(false);
+    }
+  };
+
   return (
     <div className="min-h-screen bg-gray-100 flex font-sans">
       
@@ -69,16 +131,16 @@ export default function AddProductPage() {
           <h1 className="text-xl font-bold text-gray-800">เพิ่มสินค้าใหม่</h1>
           <div className="flex items-center gap-4">
             <div className="flex items-center gap-2 border-l pl-4 border-gray-300">
-              <div className="w-8 h-8 bg-gray-200 rounded-full overflow-hidden">
-                <img src="https://placehold.co/100x100/1B4D3E/FFFFFF?text=Admin" alt="Admin" />
+              <div className="w-8 h-8 bg-[#1B4D3E] text-white flex items-center justify-center rounded-full font-bold text-sm">
+                ผู้
               </div>
-              <span className="text-sm font-medium text-gray-700">ผู้ดูแลระบบ</span>
+              <span className="text-sm font-medium text-gray-700">ผู้ขายสินค้า</span>
             </div>
           </div>
         </header>
 
         {/* Form Content */}
-        <div className="flex-1 overflow-y-auto p-4 md:p-8 bg-gray-50">
+        <form onSubmit={handleSubmit} className="flex-1 overflow-y-auto p-4 md:p-8 bg-gray-50">
           <div className="max-w-4xl mx-auto space-y-6">
             
             {/* Section 1: ข้อมูลพื้นฐาน */}
@@ -87,12 +149,23 @@ export default function AddProductPage() {
               <div className="space-y-4">
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-1">ชื่อสินค้า <span className="text-red-500">*</span></label>
-                  <input type="text" placeholder="เช่น พระสมเด็จวัดระฆัง พิมพ์ใหญ่" className="w-full px-4 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-[#1B4D3E]/50 focus:border-[#1B4D3E] text-gray-900"/>
+                  <input 
+                    type="text" 
+                    required
+                    value={name}
+                    onChange={(e) => setName(e.target.value)}
+                    placeholder="เช่น พระสมเด็จวัดระฆัง พิมพ์ใหญ่" 
+                    className="w-full px-4 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-[#1B4D3E]/50 focus:border-[#1B4D3E] text-gray-900"
+                  />
                 </div>
                 
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-1">หมวดหมู่ <span className="text-red-500">*</span></label>
-                  <select className="w-full px-4 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-[#1B4D3E]/50 focus:border-[#1B4D3E] text-gray-900 bg-white">
+                  <select 
+                    value={category}
+                    onChange={(e) => setCategory(e.target.value)}
+                    className="w-full px-4 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-[#1B4D3E]/50 focus:border-[#1B4D3E] text-gray-900 bg-white"
+                  >
                     <option value="">เลือกหมวดหมู่...</option>
                     <option value="1">พระเครื่อง</option>
                     <option value="2">รูปปั้นและทองเหลือง</option>
@@ -107,7 +180,13 @@ export default function AddProductPage() {
 
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-1">รายละเอียดสินค้า <span className="text-red-500">*</span></label>
-                  <textarea rows={5} placeholder="อธิบายจุดเด่น ตำหนิ ประวัติ หรือข้อมูลเพิ่มเติมของสินค้า..." className="w-full px-4 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-[#1B4D3E]/50 focus:border-[#1B4D3E] text-gray-900"></textarea>
+                  <textarea 
+                    rows={5} 
+                    value={description}
+                    onChange={(e) => setDescription(e.target.value)}
+                    placeholder="อธิบายจุดเด่น ตำหนิ ประวัติ หรือข้อมูลเพิ่มเติมของสินค้า..." 
+                    className="w-full px-4 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-[#1B4D3E]/50 focus:border-[#1B4D3E] text-gray-900"
+                  ></textarea>
                 </div>
               </div>
             </div>
@@ -128,27 +207,49 @@ export default function AddProductPage() {
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-1">ราคา (บาท) <span className="text-red-500">*</span></label>
-                  <input type="number" placeholder="0.00" className="w-full px-4 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-[#1B4D3E]/50 focus:border-[#1B4D3E] text-gray-900"/>
+                  <input 
+                    type="number" 
+                    required
+                    value={price}
+                    onChange={(e) => setPrice(e.target.value)}
+                    placeholder="0.00" 
+                    className="w-full px-4 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-[#1B4D3E]/50 focus:border-[#1B4D3E] text-gray-900"
+                  />
                 </div>
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-1">คลัง (ชิ้น) <span className="text-red-500">*</span></label>
-                  <input type="number" placeholder="1" className="w-full px-4 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-[#1B4D3E]/50 focus:border-[#1B4D3E] text-gray-900"/>
+                  <input 
+                    type="number" 
+                    required
+                    value={stock}
+                    onChange={(e) => setStock(e.target.value)}
+                    placeholder="1" 
+                    className="w-full px-4 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-[#1B4D3E]/50 focus:border-[#1B4D3E] text-gray-900"
+                  />
                 </div>
               </div>
             </div>
 
             {/* Action Buttons */}
             <div className="flex justify-end gap-3 pt-4 pb-10">
-              <button className="px-6 py-2.5 border border-gray-300 rounded-md text-gray-700 font-medium hover:bg-gray-50 transition">
+              <button 
+                type="button" 
+                onClick={() => router.push('/seller')}
+                className="px-6 py-2.5 border border-gray-300 rounded-md text-gray-700 font-medium hover:bg-gray-50 transition"
+              >
                 ยกเลิก
               </button>
-              <button className="px-6 py-2.5 bg-[#1B4D3E] text-white rounded-md font-bold hover:bg-[#143a2f] shadow-sm transition">
-                บันทึกและเผยแพร่
+              <button 
+                type="submit" 
+                disabled={loading}
+                className="px-6 py-2.5 bg-[#1B4D3E] text-white rounded-md font-bold hover:bg-[#143a2f] shadow-sm transition disabled:bg-gray-400"
+              >
+                {loading ? 'กำลังบันทึก...' : 'บันทึกและเผยแพร่'}
               </button>
             </div>
 
           </div>
-        </div>
+        </form>
       </main>
     </div>
   );
