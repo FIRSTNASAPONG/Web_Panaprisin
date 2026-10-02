@@ -26,8 +26,7 @@ export default function SignupPage() {
     }
 
     try {
-      // ยิง API ไปที่ Backend Laravel 
-      const res = await fetch('http://localhost/api/register', {
+      const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/register`, {
         method: 'POST',
         headers: { 
           'Content-Type': 'application/json',

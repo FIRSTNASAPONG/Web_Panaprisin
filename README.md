@@ -58,8 +58,8 @@ docker compose exec backend php artisan migrate --seed
 
 | Service | URL / Port | หน้าที่ |
 | :--- | :--- | :--- |
-| **Frontend (Next.js)** | `http://localhost` | หน้าเว็บหลัก (ทีม Frontend ทำงานที่นี่) |
-| **Backend API (Laravel)** | `http://localhost/api` | API Endpoint (ทีม Backend ทำงานที่นี่) |
+| **Frontend (Next.js)** | `http://localhost:8080` | หน้าเว็บหลัก (ทีม Frontend ทำงานที่นี่) |
+| **Backend API (Laravel)** | `http://localhost:8080/api` | API Endpoint (ทีม Backend ทำงานที่นี่) |
 | **PostgreSQL** | `localhost:5432` | ฐานข้อมูลหลัก |
 | **Meilisearch** | `localhost:7700` | ระบบ Search Engine |
 | **Valkey (Redis)** | `localhost:6379` | Cache & Queue |

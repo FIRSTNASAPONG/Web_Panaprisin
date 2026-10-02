@@ -22,7 +22,7 @@ export default function App() {
 
   // ดึงข้อมูลสินค้าจริงจาก Backend เมื่อเปิดหน้าแรก
   useEffect(() => {
-    fetch('http://localhost/api/products', {
+    fetch(`${process.env.NEXT_PUBLIC_API_URL}/products`, {
       headers: {
         'Accept': 'application/json'
       }

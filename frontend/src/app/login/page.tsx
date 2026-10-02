@@ -18,11 +18,11 @@ export default function LoginPage() {
 
     try {
       // ยิง API ไปที่ Backend Laravel
-      const res = await fetch('http://localhost/api/login', {
+      const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/login`, {
         method: 'POST',
-        headers: { 
+        headers: {
           'Content-Type': 'application/json',
-          'Accept': 'application/json'
+          'Accept': 'application/json' // ห้ามลืมบรรทัดนี้เด็ดขาด
         },
         // ส่ง email และ password ไปให้ API
         body: JSON.stringify({ email, password })
