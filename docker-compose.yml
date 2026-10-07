@@ -18,10 +18,6 @@ services:
     depends_on:
       db:
         condition: service_healthy
-      cache:
-        condition: service_started
-      search:
-        condition: service_started
 
   webserver:
     image: nginx:1.27-alpine
@@ -45,26 +41,10 @@ services:
     volumes:
       - pgsql_data:/var/lib/postgresql/data
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U dev_user -d panaprisin_db"] # <--- เช็กสถานะว่ารับ Connection ได้หรือยัง
+      test: ["CMD-SHELL", "pg_isready -U dev_user -d panaprisin_db"] 
       interval: 5s
       timeout: 5s
       retries: 5
 
-  cache:
-    image: valkey/valkey:8.1-alpine
-    ports:
-      - "6379:6379"
-
-  search:
-    image: getmeili/meilisearch:v1.11
-    environment:
-      - MEILI_ENV=development
-      - MEILI_NO_ANALYTICS=true
-    ports:
-      - "7700:7700"
-    volumes:
-      - meili_data:/meili_data
-
 volumes:
   pgsql_data:
-  meili_data:
