@@ -43,13 +43,15 @@ cp frontend/.env.example frontend/.env.local
 
 **4. ปลุกระบบทั้งหมดขึ้นมาทำงาน**
 ```bash
-docker compose up -d
+docker compose up -d --build
 ```
 > Database ถูกตั้งค่า Healthcheck ไว้แล้ว ระบบจะจัดการบูตตามลำดับที่ถูกต้องให้เองโดยอัตโนมัติ
 
 **5. สร้างตารางและข้อมูลจำลองในฐานข้อมูล (รันครั้งแรกครั้งเดียว)**
 ```bash
 docker compose exec backend php artisan migrate --seed
+docker compose exec backend php artisan storage:link
+docker compose exec backend php artisan optimize:clear
 ```
 
 ---
@@ -68,8 +70,8 @@ docker compose exec backend php artisan migrate --seed
 
 ## คู่มือสำหรับทีม Frontend (Next.js)
 
-*   เมื่อต้องการ Fetch ข้อมูล **ฝั่ง Client (เช่นใน `useEffect`)** ให้ใช้ตัวแปร `process.env.NEXT_PUBLIC_API_URL`
-*   เมื่อต้องการ Fetch ข้อมูล **ฝั่ง Server (Server Components)** ให้ใช้ตัวแปร `process.env.INTERNAL_API_URL`
+*   เมื่อต้องการ Fetch ข้อมูล **ฝั่ง Client (เช่นใน `useEffect`)** ให้ใช้ตัวแปร `${process.env.NEXT_PUBLIC_API_URL}/endpoint`
+*   เมื่อต้องการ Fetch ข้อมูล **ฝั่ง Server (Server Components)** ให้ใช้ตัวแปร `${process.env.INTERNAL_API_URL}/endpoint`
 *   **ติดตั้ง Package เพิ่มเติม:** `docker compose run --rm frontend npm install <package-name>`
 *   **ดู Log ของ Next.js:** `docker compose logs -f frontend`
 
