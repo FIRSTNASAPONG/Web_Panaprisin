@@ -12,13 +12,15 @@ return new class extends Migration
     public function up(): void
     {
         Schema::create('users', function (Blueprint $table) {
-            $table->id();
-            $table->string('name');
+            $table->id(); // ใช้ id() ตามมาตรฐาน Laravel (เทียบเท่า user_id)
             $table->string('email')->unique();
-            $table->timestamp('email_verified_at')->nullable();
             $table->string('password');
-            $table->rememberToken();
-            $table->timestamps();
+            $table->string('first_name');
+            $table->string('last_name');
+            $table->string('phone')->nullable();
+            $table->text('address')->nullable();
+            $table->enum('role', ['customer', 'seller', 'admin'])->default('customer');
+            $table->timestamps(); // สร้าง created_at และ updated_at อัตโนมัติ
         });
 
         Schema::create('password_reset_tokens', function (Blueprint $table) {
