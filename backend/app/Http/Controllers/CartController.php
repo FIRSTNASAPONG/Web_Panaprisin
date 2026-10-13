@@ -6,6 +6,8 @@ use App\Models\Cart;
 use App\Models\CartItem;
 use App\Models\Product;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\DB;
+use Illuminate\Validation\ValidationException;
 
 class CartController extends Controller
 {
@@ -13,7 +15,7 @@ class CartController extends Controller
     public function getCart(Request $request)
     {
         $user = $request->user();
-        
+
         // ค้นหาตะกร้าของ User นี้ ถ้ายังไม่มีให้สร้างใหม่เลยอัตโนมัติ (firstOrCreate)
         $cart = Cart::firstOrCreate(['user_id' => $user->id]);
 
@@ -22,39 +24,53 @@ class CartController extends Controller
 
         return response()->json($cart);
     }
-
     // 2. เพิ่มสินค้าลงตะกร้า
     public function addToCart(Request $request)
     {
-        $request->validate([
-            'product_id' => 'required|exists:products,id',
-            'quantity' => 'required|integer|min:1'
+        $data = $request->validate([
+            'product_id' => 'required|integer|exists:products,id',
+            'quantity' => 'required|integer|min:1|max:100',
         ]);
-
-        $user = $request->user();
-        $cart = Cart::firstOrCreate(['user_id' => $user->id]);
-
-        // เช็คว่าสินค้านี้มีในตะกร้าอยู่แล้วหรือเปล่า
-        $cartItem = CartItem::where('cart_id', $cart->id)
-                            ->where('product_id', $request->product_id)
-                            ->first();
-
-        if ($cartItem) {
-            // ถ้ามีอยู่แล้ว ให้บวกจำนวนเพิ่ม
-            $cartItem->quantity += $request->quantity;
-            $cartItem->save();
-        } else {
-            // ถ้ายังไม่มี ให้สร้างแถวใหม่
-            CartItem::create([
-                'cart_id' => $cart->id,
-                'product_id' => $request->product_id,
-                'quantity' => $request->quantity
-            ]);
+        if ($request->user()->role !== 'buyer') {
+            return response()->json([
+                'message' => 'เฉพาะผู้ซื้อเท่านั้นที่เพิ่มสินค้าได้'
+            ], 403);
         }
-
-        return response()->json(['message' => 'เพิ่มสินค้าลงตะกร้าสำเร็จ']);
+        return DB::transaction(function () use ($request, $data) {
+            $cart = Cart::firstOrCreate([
+                'user_id' => $request->user()->id
+            ]);
+            $cart = Cart::whereKey($cart->id)
+                ->lockForUpdate()
+                ->firstOrFail();
+            $product = Product::whereKey($data['product_id'])
+                ->lockForUpdate()
+                ->firstOrFail();
+            $item = CartItem::where('cart_id', $cart->id)
+                ->where('product_id', $product->id)
+                ->first();
+            $newQuantity = ($item?->quantity ?? 0)
+                + $data['quantity'];
+            if ($newQuantity > $product->stock_quantity) {
+                throw ValidationException::withMessages([
+                    'quantity' => 'จำนวนสินค้าเกินสต็อกที่มี'
+                ]);
+            }
+            if ($item) {
+                $item->update(['quantity' => $newQuantity]);
+            } else {
+                $item = CartItem::create([
+                    'cart_id' => $cart->id,
+                    'product_id' => $product->id,
+                    'quantity' => $newQuantity,
+                ]);
+            }
+            return response()->json([
+                'message' => 'เพิ่มสินค้าสำเร็จ',
+                'item' => $item
+            ], 201);
+        }, 3);
     }
-
     // 3. แก้ไขจำนวนสินค้าในตะกร้า (เช่น กดปุ่ม + / -)
     public function updateQuantity(Request $request, $itemId)
     {
@@ -63,7 +79,7 @@ class CartController extends Controller
         ]);
 
         $cartItem = CartItem::findOrFail($itemId);
-        
+
         // เช็คความปลอดภัย: ตะกร้านี้เป็นของคนที่ล็อกอินอยู่จริงๆ ใช่ไหม?
         if ($cartItem->cart->user_id !== $request->user()->id) {
             return response()->json(['message' => 'ไม่อนุญาต'], 403);

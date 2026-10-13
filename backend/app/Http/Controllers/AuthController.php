@@ -12,29 +12,31 @@ class AuthController extends Controller
     // Register
     public function register(Request $request)
     {
-        $request->validate([
-            'name' => 'required|string|max:255',
-            'email' => 'required|string|email|max:255|unique:users',
+        $validated = $request->validate([
+            'first_name' => 'required|string|max:255',
+            'last_name' => 'required|string|max:255',
+            'email' => 'required|string|email|max:255|unique:users,email',
             'password' => 'required|string|min:8|confirmed',
-            'role' => 'in:buyer,seller' // รองรับการเลือกว่าจะเป็นผู้ซื้อหรือผู้ขาย
+            'role' => 'sometimes|in:buyer,seller',
         ]);
 
         $user = User::create([
-            'name' => $request->name,
-            'email' => $request->email,
-            'password' => Hash::make($request->password),
-            'role' => $request->role ?? 'buyer', // ค่าเริ่มต้นเป็น buyer
+            'first_name' => $validated['first_name'],
+            'last_name' => $validated['last_name'],
+            'email' => $validated['email'],
+            'password' => Hash::make($validated['password']),
+            'role' => $validated['role'] ?? 'buyer',
         ]);
 
         $token = $user->createToken('auth_token')->plainTextToken;
 
         return response()->json([
+            'message' => 'สมัครสมาชิกสำเร็จ',
             'access_token' => $token,
             'token_type' => 'Bearer',
-            'user' => $user
-        ]);
+            'user' => $user,
+        ], 201);
     }
-
     // Login
     public function login(Request $request)
     {
@@ -51,8 +53,6 @@ class AuthController extends Controller
             ]);
         }
 
-    
-
         $token = $user->createToken('auth_token')->plainTextToken;
 
         return response()->json([
@@ -66,7 +66,7 @@ class AuthController extends Controller
     public function logout(Request $request)
     {
         $request->user()->currentAccessToken()->delete();
-        
+
         return response()->json([
             'message' => 'ออกจากระบบสำเร็จ'
         ]);

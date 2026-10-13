@@ -34,19 +34,17 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::post('/cart', [CartController::class, 'addToCart']);        // หยิบใส่ตะกร้า
     Route::put('/cart/{itemId}', [CartController::class, 'updateQuantity']); // แก้ไขจำนวน
     Route::delete('/cart/{itemId}', [CartController::class, 'removeItem']);  // ลบทิ้ง
-
     // Checkout สั่งซื้อ
     Route::post('/checkout', [OrderController::class, 'checkout']);
-    
     // ลูกค้าส่งรีวิว
     Route::post('/products/{productId}/reviews', [ReviewController::class, 'store']);
     // แอดมิน และ ผู้ขาย สามารถดูรายงานยอดขายได้ (ไปแยกสิทธิ์กันข้างใน Controller)
     Route::get('/reports/sales', [ReportController::class, 'salesSummary']);
-    
+    //order
+    Route::get('/orders', [OrderController::class, 'index']);
 });
 
 Route::middleware(['auth:sanctum', IsAdmin::class])->group(function () {
-    Route::post('/products', [ProductController::class, 'store']); // แอดมินเพิ่มสินค้า
     Route::delete('/products/{id}', [ProductController::class, 'destroy']); // แอดมินลบสินค้า
     // แอดมินอนุมัติรีวิว
     Route::put('/admin/reviews/{id}/approve', function ($id) {
@@ -62,6 +60,10 @@ Route::middleware(['auth:sanctum', IsAdmin::class])->group(function () {
         App\Models\User::destroy($id);
         return response()->json(['message' => 'ลบผู้ใช้งานสำเร็จ']);
     });
+    Route::put('/orders/{id}/status', [
+        OrderController::class,
+        'updateStatus'
+    ]);
 });
 
 Route::get('/user', function (Request $request) {

@@ -19,7 +19,10 @@ return new class extends Migration
             $table->string('last_name');
             $table->string('phone')->nullable();
             $table->text('address')->nullable();
-            $table->enum('role', ['customer', 'seller', 'admin'])->default('customer');
+            
+            // แก้ไข: เปลี่ยนจาก 'customer' เป็น 'buyer' เพื่อให้ตรงกับ AuthController
+            $table->enum('role', ['buyer', 'seller', 'admin'])->default('buyer');
+            
             $table->timestamps(); // สร้าง created_at และ updated_at อัตโนมัติ
         });
 

@@ -6,101 +6,187 @@ use App\Models\Cart;
 use App\Models\Order;
 use App\Models\OrderItem;
 use App\Models\Payment;
+use App\Models\Product;
+use Illuminate\Validation\ValidationException;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 
 class OrderController extends Controller
 {
-    public function checkout(Request $request)
+    public function index(Request $request)
     {
-        $request->validate([
-            'shipping_address' => 'required|string',
-            'payment_method' => 'required|in:promptpay,credit_card,bank_transfer'
-        ]);
-
         $user = $request->user();
-        // โหลดข้อมูลสินค้าในตะกร้า
-        $cart = Cart::firstOrCreate(['user_id' => $user->id]);
-
-        // เช็คว่าตะกร้าว่างไหม
-        if ($cart->items->isEmpty()) {
-            return response()->json(['message' => 'ตะกร้าสินค้าว่างเปล่า'], 400);
+        if (!in_array($user->role, ['seller', 'admin'], true)) {
+            return response()->json([
+                'message' => 'Forbidden'
+            ], 403);
         }
-
-        // เริ่ม Transaction: ป้องกันข้อมูลพังกลางทาง
-        DB::beginTransaction();
-
-        try {
-            $totalAmount = 0;
-
-            // 1. สร้างบิลคำสั่งซื้อ (Order)
-            $order = Order::create([
-                'user_id' => $user->id,
-                'total_amount' => 0, // เดี๋ยวมาบวกทีหลัง
-                'order_status' => 'completed',
-                'shipping_address' => $request->shipping_address,
-            ]);
-
-            // 2. ลูปรายการสินค้าในตะกร้า เพื่อหักสต็อกและบันทึกลง OrderItem
-            foreach ($cart->items as $cartItem) {
-                $product = $cartItem->product;
-
-                // เช็คว่าสต็อกพอไหม
-                if ($product->stock_quantity < $cartItem->quantity) {
-                    throw new \Exception('สินค้า ' . $product->name . ' มีสต็อกไม่พอ');
-                }
-
-                $subtotal = $product->price * $cartItem->quantity;
-                $totalAmount += $subtotal;
-
-                // บันทึกรายการสินค้าในบิล
-                OrderItem::create([
-                    'order_id' => $order->id ?? null,
-                    'product_id' => $product->id,
-                    'quantity' => $cartItem->quantity,
-                    'unit_price' => $product->price,
-                    'subtotal' => $subtotal
-                ]);
-
-                // ตัดสต็อกสินค้า
-                $product->decrement('stock_quantity', $cartItem->quantity);
-            }
-
-            // อัปเดตยอดรวมกลับไปที่ Order
-            $order->update(['total_amount' => $totalAmount]);
-
-            // 3. สร้างข้อมูลรอการชำระเงิน (Payment)
-            Payment::create([
-                'order_id' => $order->id,
-                'payment_method' => $request->payment_method,
-                'amount' => $totalAmount,
-                'payment_status' => 'pending'
-            ]);
-
-            // 4. เคลียร์ของในตะกร้าทิ้ง
-            $cart->items()->delete();
-
-            // ยืนยันการทำงานทั้งหมด (Commit)
-            DB::commit();
-
-            return response()->json(['message' => 'สั่งซื้อสำเร็จ', 'order_id' => $order->id], 201);
-
-        } catch (\Exception $e) {
-            // ถ้าระหว่างทำงานมี Error ให้ย้อนข้อมูลกลับทั้งหมด (Rollback) จะได้ไม่มีบิลผี หรือสต็อกหายฟรี
-            DB::rollBack();
-            return response()->json(['message' => 'เกิดข้อผิดพลาด: ' . $e->getMessage()], 400);
+        if ($user->role === 'admin') {
+            return response()->json(
+                Order::with(['user', 'items.product', 'payment'])
+                    ->latest()
+                    ->paginate(20)
+            );
         }
+        $orders = Order::query()
+            ->whereHas('items.product', function ($query) use ($user) {
+                $query->where('user_id', $user->id);
+            })
+            ->with([
+                'items' => function ($query) use ($user) {
+                    $query->whereHas('product', function ($q) use ($user) {
+                        $q->where('user_id', $user->id);
+                    });
+                },
+                'items.product'
+            ])
+            ->latest()
+            ->paginate(20);
+        $orders->getCollection()->transform(function ($order) {
+            return [
+                'id' => $order->id,
+                'status' => $order->order_status,
+                'created_at' => $order->created_at,
+                'items' => $order->items->map(function ($item) {
+                    return [
+                        'product_id' => $item->product_id,
+                        'name' => $item->product?->name,
+                        'quantity' => $item->quantity,
+                        'price' => $item->unit_price,
+                        'subtotal' => $item->subtotal,
+                    ];
+                }),
+                'total_amount' => $order->items->sum('subtotal')
+            ];
+        });
+        return response()->json($orders);
     }
 
+    public function checkout(Request $request)
+    {
+        $validated = $request->validate([
+            'shipping_address' => 'required|string|max:2000',
+            'payment_method' => 'required|in:promptpay,bank_transfer',
+        ]);
+        if ($request->user()->role !== 'buyer') {
+            return response()->json([
+                'message' => 'เฉพาะผู้ซื้อเท่านั้นที่สั่งซื้อได้'
+            ], 403);
+        }
+        try {
+            return DB::transaction(function () use ($request, $validated) {
+                $cart = Cart::where('user_id', $request->user()->id)
+                    ->lockForUpdate()
+                    ->first();
+                if (!$cart) {
+                    return response()->json([
+                        'message' => 'ตะกร้าว่างเปล่า'
+                    ], 422);
+                }
+                $items = $cart->items()
+                    ->orderBy('product_id')
+                    ->get();
+                if ($items->isEmpty()) {
+                    return response()->json([
+                        'message' => 'ตะกร้าว่างเปล่า'
+                    ], 422);
+                }
+                // Lock สินค้าตามลำดับ ID เพื่อช่วยลด Deadlock
+                $products = Product::whereIn(
+                    'id',
+                    $items->pluck('product_id')
+                )
+                    ->orderBy('id')
+                    ->lockForUpdate()
+                    ->get()
+                    ->keyBy('id');
+                $total = '0.00';
+                $lines = [];
+                foreach ($items as $item) {
+                    $product = $products->get($item->product_id);
+                    if (!$product) {
+                        throw ValidationException::withMessages([
+                            'cart' => 'มีสินค้าที่ไม่สามารถสั่งซื้อได้'
+                        ]);
+                    }
+                    if (
+                        $item->quantity < 1 ||
+                        $product->stock_quantity < $item->quantity
+                    ) {
+                        throw ValidationException::withMessages([
+                            'cart' => 'สต็อกสินค้าไม่เพียงพอ: ' .
+                                $product->name
+                        ]);
+                    }
+                    // คำนวณเงินจากราคาใน Database เท่านั้น
+                    $subtotal = bcmul(
+                        (string) $product->price,
+                        (string) $item->quantity,
+                        2
+                    );
+                    $total = bcadd($total, $subtotal, 2);
+                    $lines[] = [
+                        'product' => $product,
+                        'quantity' => $item->quantity,
+                        'subtotal' => $subtotal,
+                    ];
+                }
+                $order = Order::create([
+                    'user_id' => $request->user()->id,
+                    'total_amount' => $total,
+                    'order_status' => 'pending',
+                    'shipping_address' => $validated['shipping_address'],
+                ]);
+                foreach ($lines as $line) {
+                    $product = $line['product'];
+                    OrderItem::create([
+                        'order_id' => $order->id,
+                        'product_id' => $product->id,
+                        'quantity' => $line['quantity'],
+                        'unit_price' => $product->price,
+                        'subtotal' => $line['subtotal'],
+                    ]);
+                    $product->decrement(
+                        'stock_quantity',
+                        $line['quantity']
+                    );
+                }
+                Payment::create([
+                    'order_id' => $order->id,
+                    'payment_method' => $validated['payment_method'],
+                    'amount' => $total,
+                    'payment_status' => 'pending',
+                ]);
+                $cart->items()->delete();
+                return response()->json([
+                    'message' => 'สร้างคำสั่งซื้อสำเร็จ รอชำระเงิน',
+                    'order_id' => $order->id,
+                    'total_amount' => $total,
+                    'order_status' => 'pending',
+                    'payment_status' => 'pending',
+                ], 201);
+            }, 3);
+        } catch (ValidationException $e) {
+            throw $e;
+        }
+    }
     public function updateStatus(Request $request, $id)
     {
-        $request->validate(['order_status' => 'required|in:pending,paid,shipped,completed,cancelled']);
-        
+        if ($request->user()->role !== 'admin') {
+            return response()->json([
+                'message' => 'Forbidden'
+            ], 403);
+        }
+        $validated = $request->validate([
+            'order_status' => 'required|in:pending,paid,shipped,completed,cancelled'
+        ]);
         $order = Order::findOrFail($id);
-        
-        // (สามารถเขียนเช็คสิทธิ์เพิ่มได้ว่า Seller ควรอัปเดตได้เฉพาะบิลที่มีสินค้าตัวเอง)
-        
-        $order->update(['order_status' => $request->order_status]);
-        return response()->json(['message' => 'อัปเดตสถานะคำสั่งซื้อเป็น ' . $request->order_status]);
+        $order->update([
+            'order_status' => $validated['order_status']
+        ]);
+        return response()->json([
+            'message' => 'อัปเดตสถานะคำสั่งซื้อสำเร็จ',
+            'order' => $order
+        ]);
     }
 }
