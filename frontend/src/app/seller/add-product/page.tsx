@@ -30,7 +30,14 @@ export default function AddProductPage() {
   };
 
   useEffect(() => {
-    // 🔴 ปิดระบบเช็คสิทธิ์ชั่วคราว
+    const userString = localStorage.getItem("user");
+    const user = userString ? JSON.parse(userString) : null;
+    const token = localStorage.getItem("token");
+
+    if (!token || !user || (user.role !== "seller" && user.role !== "admin")) {
+      alert("เฉพาะผู้ขายเท่านั้นที่สามารถเข้าถึงหน้านี้ได้");
+      router.push("/");
+    }
   }, [router]);
 
   // 2. ฟังก์ชันส่งข้อมูลไปยัง Backend Laravel

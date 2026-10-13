@@ -5,7 +5,7 @@ import { useCart } from '../context/CartContext';
 import { useRouter } from 'next/navigation'; 
 
 export default function Navbar() {
-  const { cart } = useCart(); 
+  const { cart, clearCart } = useCart(); 
   const router = useRouter();
 
   const [user, setUser] = useState<any>(null);
@@ -17,16 +17,39 @@ export default function Navbar() {
     setMounted(true);
     const userString = localStorage.getItem('user');
     if (userString) {
-      setUser(JSON.parse(userString));
+      try {
+        setUser(JSON.parse(userString));
+      } catch {
+        setUser(null);
+      }
     }
   }, []);
 
-  const handleLogout = () => {
+  // 🟢 ยิง POST /api/logout เพื่อ revoke token ตาม P1 Checklist
+  const handleLogout = async () => {
+    const token = localStorage.getItem('token');
+    const apiUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8080/api';
+
+    if (token) {
+      try {
+        await fetch(`${apiUrl}/logout`, {
+          method: 'POST',
+          headers: {
+            'Accept': 'application/json',
+            'Authorization': `Bearer ${token}`,
+          },
+        });
+      } catch (error) {
+        console.error('Logout error:', error);
+      }
+    }
+
     localStorage.removeItem('token');
     localStorage.removeItem('user');
+    clearCart();
     setUser(null);
     alert('ออกจากระบบสำเร็จ');
-    router.push('/');
+    router.push('/login');
   };
 
   if (!mounted) return null;
@@ -55,8 +78,9 @@ export default function Navbar() {
             
             {user ? (
               <>
-                {/* 🔴 แก้ไขตรงนี้: เปลี่ยน user.name เป็น user.first_name */}
-                <span className="font-bold text-green-200 ml-2">สวัสดี, {user.first_name}</span>
+                <span className="font-bold text-green-200 ml-2">
+                  สวัสดี, {user.first_name || user.name || 'ผู้ใช้งาน'}
+                </span>
                 <span className="border-l border-gray-500 h-3"></span>
                 <button onClick={handleLogout} className="hover:text-red-300 transition text-sm">ออกจากระบบ</button>
               </>

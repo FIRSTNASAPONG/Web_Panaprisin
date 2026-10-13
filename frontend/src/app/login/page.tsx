@@ -2,33 +2,35 @@
 
 import React, { useState } from 'react';
 import { useRouter } from 'next/navigation';
-import api from '@/lib/axios'; // นำเข้า axios
+import api from '@/lib/axios';
+import { useCart } from '../../context/CartContext'; // 🟢 ดึง CartContext มาซิงค์ตอน Login
 
 export default function LoginPage() {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [errorMessage, setErrorMessage] = useState('');
-  // 1. เพิ่ม State สำหรับจัดการ Loading
   const [isLoading, setIsLoading] = useState(false);
   
   const router = useRouter();
+  const { fetchCartFromDB } = useCart();
 
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
     setErrorMessage('');
-    setIsLoading(true); // เริ่มหมุน Loading
+    setIsLoading(true);
 
     try {
-      // ยิง API ด้วย Axios
       const res = await api.post('/login', { email, password });
-      
       const data = res.data;
       
-      // เก็บ Token
+      // เก็บ Token และข้อมูล User
       localStorage.setItem('token', data.access_token || data.token);
       localStorage.setItem('user', JSON.stringify(data.user));
       
-      if (data.user.role === 'seller') {
+      // 🟢 ซิงค์ข้อมูลตะกร้าจากฐานข้อมูลทันทีที่ Login สำเร็จ (ตาม P0 Checklist)
+      await fetchCartFromDB();
+      
+      if (data.user.role === 'seller' || data.user.role === 'admin') {
         router.push('/seller');
       } else {
         router.push('/');
@@ -36,11 +38,10 @@ export default function LoginPage() {
       
     } catch (error: any) {
       console.error('Login error:', error);
-      // 2. เปลี่ยนจากการเด้ง Alert เป็นการแสดงข้อความสีแดงใน UI
       const backendMessage = error.response?.data?.message || 'อีเมลหรือรหัสผ่านไม่ถูกต้อง กรุณาลองใหม่อีกครั้ง';
       setErrorMessage(backendMessage);
     } finally {
-      setIsLoading(false); // ปิด Loading ไม่ว่าจะสำเร็จหรือพัง
+      setIsLoading(false);
     }
   };
 
@@ -70,7 +71,6 @@ export default function LoginPage() {
           <div className="w-full max-w-[400px] bg-white rounded-sm shadow-xl p-8">
             <h2 className="text-xl text-gray-900 font-bold mb-6">เข้าสู่ระบบ</h2>
             
-            {/* กล่องแดงจะแสดงก็ต่อเมื่อมี errorMessage */}
             {errorMessage && (
               <div className="bg-red-50 border-l-4 border-red-500 text-red-700 px-4 py-3 rounded-sm mb-6 text-sm font-medium shadow-sm">
                 {errorMessage}

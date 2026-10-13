@@ -1,16 +1,16 @@
 "use client";
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import Navbar from '../../components/Navbar';
 import Footer from '../../components/Footer';
 import { useCart } from '../../context/CartContext';
 import { useRouter } from 'next/navigation';
 
 export default function CheckoutPage() {
-  const { cart, clearCart } = useCart();
+  const { cart, clearCart, fetchCartFromDB } = useCart();
   const router = useRouter();
 
-  // State สำหรับฟอร์ม (ปล่อย Mock ข้อมูลไว้ตามเดิมเพื่อความเร็วตอนเทสต์)
+  // State สำหรับฟอร์ม
   const [email, setEmail] = useState('somchai@example.com'); 
   const [phone, setPhone] = useState('080-000-0000');
   const [fullName, setFullName] = useState('สมชาย ใจดี');
@@ -19,13 +19,29 @@ export default function CheckoutPage() {
   const [district, setDistrict] = useState('หางดง');
   const [province, setProvince] = useState('เชียงใหม่');
   const [zipcode, setZipcode] = useState('50230');
+  const [paymentMethod, setPaymentMethod] = useState<'bank_transfer' | 'promptpay'>('bank_transfer');
   
-  // 🟢 State สำหรับรูปสลิป
+  // State สำหรับรูปสลิป
   const [slipImage, setSlipImage] = useState<File | null>(null);
   const [slipPreview, setSlipPreview] = useState<string | null>(null);
 
   const [isProcessing, setIsProcessing] = useState(false);
   const [isTermsAccepted, setIsTermsAccepted] = useState(false);
+
+  // โหลดข้อมูลผู้ใช้และซิงค์ตะกร้าล่าสุดจาก DB ตอนเข้าหน้านี้
+  useEffect(() => {
+    const userStr = localStorage.getItem('user');
+    if (userStr) {
+      try {
+        const user = JSON.parse(userStr);
+        if (user.email) setEmail(user.email);
+        if (user.name) setFullName(user.name);
+      } catch (e) {
+        console.error(e);
+      }
+    }
+    fetchCartFromDB();
+  }, [fetchCartFromDB]);
 
   // คำนวณยอดรวม
   const totalPrice = cart.reduce((total, item) => total + (item.price * item.quantity), 0);
@@ -33,7 +49,7 @@ export default function CheckoutPage() {
   const discount = 0;
   const grandTotal = totalPrice + shippingFee - discount;
 
-  // 🟢 ฟังก์ชันแสดงพรีวิวรูปสลิป
+  // ฟังก์ชันแสดงพรีวิวรูปสลิป
   const handleSlipChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (file) {
@@ -44,10 +60,13 @@ export default function CheckoutPage() {
     }
   };
 
-  // 🟢 ฟังก์ชันส่งข้อมูลการสั่งซื้อไป Backend
+  // 🟢 ฟังก์ชันส่งข้อมูลการสั่งซื้อไปที่ POST /api/checkout (ตรงตาม OrderController.php)
   const handlePlaceOrder = async (e: React.FormEvent) => {
     e.preventDefault();
     
+    // ป้องกันการกดปุ่มซ้ำ (P0 Checklist)
+    if (isProcessing) return;
+
     if (cart.length === 0) {
       alert('ไม่มีสินค้าในตะกร้า');
       return;
@@ -58,43 +77,49 @@ export default function CheckoutPage() {
       return;
     }
 
-    // บังคับแนบสลิป
-    if (!slipImage) {
-      alert('กรุณาแนบรูปหลักฐานการโอนเงิน (สลิป) ด้วยครับ');
+    const token = localStorage.getItem('token');
+    if (!token) {
+      alert('กรุณาเข้าสู่ระบบก่อนทำการสั่งซื้อครับ');
+      router.push('/login');
       return;
     }
 
     setIsProcessing(true);
 
     try {
-      // ใช้ FormData เพราะมีการอัปโหลดรูปสลิป
       const formData = new FormData();
       
-      // รวมที่อยู่เป็นก้อนเดียว (หรือจะส่งแยกก็แล้วแต่ Backend ออกแบบไว้)
-      const fullAddress = `${address} ต.${subDistrict} อ.${district} จ.${province} ${zipcode}`;
+      // รวมชื่อ เบอร์โทร และที่อยู่จัดส่งเข้าด้วยกันเพื่อส่งเข้าฟิลด์ shipping_address
+      const fullAddress = `${fullName} (${phone}) ${address} ต.${subDistrict} อ.${district} จ.${province} ${zipcode}`;
       
+      // 🟢 2 ฟิลด์หลักที่ OrderController.php บังคับตรวจ (validate)
+      formData.append('shipping_address', fullAddress);
+      formData.append('payment_method', paymentMethod);
+
+      // แนบข้อมูลเสริมเผื่อใช้
       formData.append('email', email);
       formData.append('phone', phone);
       formData.append('customer_name', fullName);
-      formData.append('address', fullAddress);
-      formData.append('total_amount', grandTotal.toString());
-      formData.append('slip_image', slipImage);
-      formData.append('items', JSON.stringify(cart)); // ส่งรายการของที่สั่งไปด้วย
+      if (slipImage) {
+        formData.append('slip_image', slipImage);
+      }
 
-      // ยิง API ไปเซฟออเดอร์
-      const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/orders`, {
+      // 🟢 ยิงไปที่ /checkout พร้อมแนบ Bearer Token
+      const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/checkout`, {
         method: 'POST',
         headers: {
           'Accept': 'application/json',
+          'Authorization': `Bearer ${token}`,
         },
         body: formData
       });
 
+      const data = await res.json().catch(() => ({}));
+
       if (res.ok) {
-        clearCart(); // ล้างตะกร้า
+        clearCart(); // ล้างตะกร้าหน้าบ้าน (หลังบ้านล้างให้แล้วใน Controller)
         router.push('/checkout/success'); // พาวาร์ปไปหน้าสำเร็จ
       } else {
-        const data = await res.json();
         alert(data.message || 'เกิดข้อผิดพลาดในการส่งคำสั่งซื้อ');
       }
     } catch (error) {
@@ -113,9 +138,9 @@ export default function CheckoutPage() {
       <div className="bg-[#f5f6f6] pt-8 pb-4">
         <div className="container mx-auto px-4 max-w-6xl">
           <div className="flex items-center text-sm font-medium mb-6 text-gray-500">
-            <span className="hover:text-[#1B4D3E] cursor-pointer">พณาไพรสิน</span>
+            <span onClick={() => router.push('/')} className="hover:text-[#1B4D3E] cursor-pointer">พณาไพรสิน</span>
             <span className="mx-2">›</span>
-            <span className="hover:text-[#1B4D3E] cursor-pointer">ตะกร้าสินค้า</span>
+            <span onClick={() => router.push('/cart')} className="hover:text-[#1B4D3E] cursor-pointer">ตะกร้าสินค้า</span>
             <span className="mx-2">›</span>
             <span className="text-gray-900">ชำระเงิน</span>
           </div>
@@ -221,14 +246,38 @@ export default function CheckoutPage() {
                 </div>
               </div>
 
-              {/* 🟢 3. บัญชีโอนเงิน & แนบสลิป (ส่วนที่เพิ่มใหม่) */}
+              {/* 3. วิธีชำระเงิน & แนบสลิป */}
               <div className="bg-white rounded-md shadow-sm border border-gray-100 p-8">
-                <h2 className="text-lg font-bold text-gray-900 mb-6 border-b pb-3">แจ้งโอนเงิน</h2>
+                <h2 className="text-lg font-bold text-gray-900 mb-6 border-b pb-3">ช่องทางชำระเงินและแจ้งโอน</h2>
+
+                <div className="grid grid-cols-2 gap-4 mb-6">
+                  <label className={`border rounded-md p-4 flex items-center cursor-pointer ${paymentMethod === 'bank_transfer' ? 'border-[#1B4D3E] bg-green-50/50' : 'border-gray-200'}`}>
+                    <input
+                      type="radio"
+                      name="payment_method"
+                      value="bank_transfer"
+                      checked={paymentMethod === 'bank_transfer'}
+                      onChange={() => setPaymentMethod('bank_transfer')}
+                      className="text-[#1B4D3E] focus:ring-[#1B4D3E]"
+                    />
+                    <span className="ml-2 text-sm font-bold text-gray-800">โอนเงินผ่านธนาคาร</span>
+                  </label>
+                  <label className={`border rounded-md p-4 flex items-center cursor-pointer ${paymentMethod === 'promptpay' ? 'border-[#1B4D3E] bg-green-50/50' : 'border-gray-200'}`}>
+                    <input
+                      type="radio"
+                      name="payment_method"
+                      value="promptpay"
+                      checked={paymentMethod === 'promptpay'}
+                      onChange={() => setPaymentMethod('promptpay')}
+                      className="text-[#1B4D3E] focus:ring-[#1B4D3E]"
+                    />
+                    <span className="ml-2 text-sm font-bold text-gray-800">สแกน QR พร้อมเพย์</span>
+                  </label>
+                </div>
                 
                 <div className="bg-green-50 border border-green-200 rounded-md p-6 mb-6 text-center">
                   <p className="text-sm text-gray-600 mb-2 font-medium">โอนเงินเข้าบัญชี (พร้อมเพย์)</p>
                   <div className="w-32 h-32 bg-white mx-auto mb-3 flex items-center justify-center border border-gray-300 shadow-sm">
-                    {/* เปลี่ยน URL รูปเป็น QR Code ของคุณได้เลย */}
                     <span className="text-gray-400 text-xs">รูป QR Code</span>
                   </div>
                   <p className="font-bold text-gray-900">ธนาคารกสิกรไทย</p>
@@ -237,7 +286,7 @@ export default function CheckoutPage() {
                 </div>
 
                 <div>
-                  <label className="block text-sm font-bold text-gray-900 mb-3">แนบหลักฐานการโอนเงิน (สลิป) <span className="text-red-500">*</span></label>
+                  <label className="block text-sm font-bold text-gray-900 mb-3">แนบหลักฐานการโอนเงิน (สลิป)</label>
                   
                   {slipPreview && (
                     <div className="mb-4 w-48 h-auto border-2 border-gray-200 rounded-md overflow-hidden mx-auto shadow-sm">
@@ -271,7 +320,7 @@ export default function CheckoutPage() {
                     <div key={item.id} className="flex gap-4">
                       <div className="w-20 h-24 bg-gray-100 text-gray-400 flex items-center justify-center shrink-0 border border-gray-200 rounded-sm">
                         {item.image ? (
-                          <img src={`http://localhost:8080/storage/${item.image}`} alt={item.name} className="w-full h-full object-cover rounded-sm" />
+                          <img src={item.image.startsWith('http') ? item.image : `http://localhost:8080/storage/${item.image}`} alt={item.name} className="w-full h-full object-cover rounded-sm" onError={(e) => { e.currentTarget.src = '/image_289eb4.jpg'; }} />
                         ) : (
                           <span className="text-xs font-bold">ไม่มีรูป</span>
                         )}
@@ -311,22 +360,22 @@ export default function CheckoutPage() {
                     onChange={(e) => setIsTermsAccepted(e.target.checked)}
                     className="mt-1 form-checkbox text-[#1B4D3E] rounded-sm w-4 h-4 border-gray-400 focus:ring-[#1B4D3E]" 
                   />
-                  <span className="ml-3 text-sm font-bold text-gray-700 leading-snug">ฉันได้ตรวจสอบข้อมูลและอัปโหลดสลิปโอนเงินเรียบร้อยแล้ว</span>
+                  <span className="ml-3 text-sm font-bold text-gray-700 leading-snug">ฉันได้ตรวจสอบข้อมูลและยอมรับเงื่อนไขการสั่งซื้อแล้ว</span>
                 </label>
 
                 <button 
                   type="submit"
-                  disabled={isProcessing || !slipImage}
+                  disabled={isProcessing}
                   className={`w-full py-4 rounded-md font-bold shadow-md transition uppercase tracking-wide text-sm ${
-                    isProcessing || !slipImage 
+                    isProcessing
                       ? 'bg-gray-400 text-gray-200 cursor-not-allowed' 
                       : 'bg-[#1B4D3E] text-white hover:bg-[#143a2f]'
                   }`}
                 >
-                  {isProcessing ? 'กำลังส่งข้อมูล...' : (!slipImage ? 'กรุณาอัปโหลดสลิปก่อน' : 'แจ้งโอนเงิน')}
+                  {isProcessing ? 'กำลังส่งข้อมูล...' : 'ยืนยันคำสั่งซื้อ'}
                 </button>
                 
-                <p className="text-xs text-gray-400 text-center mt-4 font-medium">ร้านค้าจะจัดส่งสินค้าหลังจากตรวจสอบสลิปแล้ว</p>
+                <p className="text-xs text-gray-400 text-center mt-4 font-medium">ร้านค้าจะจัดส่งสินค้าหลังจากตรวจสอบคำสั่งซื้อแล้ว</p>
               </div>
             </div>
 

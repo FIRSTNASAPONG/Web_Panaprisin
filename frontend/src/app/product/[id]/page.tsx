@@ -1,62 +1,47 @@
 "use client";
 
 import React, { useState, useEffect } from 'react';
-import { useParams } from 'next/navigation';
+import { useParams, useRouter } from 'next/navigation';
 import { useCart } from '../../../context/CartContext';
 import Navbar from '../../../components/Navbar';
 import Footer from '../../../components/Footer';
 
-// ข้อมูลจำลองเผื่อ Backend ส่งข้อมูลมาพังหรือไม่สมบูรณ์
-const getFallbackProduct = (id: number) => ({
-  id: id,
-  name: 'สินค้าของสะสมโบราณ (ข้อมูลจำลอง)',
-  price: 12500,
-  stock: 5,
-  description: 'นี่คือรายละเอียดสินค้าจำลอง เนื่องจาก Backend ยังไม่ได้ส่งข้อมูลจริงมาให้\n\n- สภาพสมบูรณ์ 100%\n- ผ่านการตรวจสอบจากผู้เชี่ยวชาญ\n- เหมาะสำหรับนักสะสมและตกแต่งบ้าน\n- จัดส่งแพ็คกันกระแทกอย่างดีเยี่ยม',
-  category: 'ของสะสมหายาก',
-  image_url: '',
-  rating: 4.9,
-  reviews: 24,
-  sold: 12
-});
-
 export default function ProductDetailPage() {
-  const params = useParams(); 
-  const productId = Number(params?.id); 
+  const params = useParams();
+  const router = useRouter();
+  const productId = Number(params?.id);
 
   const [product, setProduct] = useState<any>(null);
   const [loading, setLoading] = useState(true);
   const [quantity, setQuantity] = useState(1);
-  const { addToCart } = useCart(); 
+  const [isAdding, setIsAdding] = useState(false);
+  const { addToCart } = useCart();
 
   useEffect(() => {
     if (productId) {
-      // ใช้ตัวแปร NEXT_PUBLIC_API_URL แบบเดียวกับหน้าแรก
       const apiUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8080/api';
-      
+
       fetch(`${apiUrl}/products/${productId}`, {
-        headers: { 'Accept': 'application/json' }
+        headers: { 'Accept': 'application/json' },
+        cache: 'no-store'
       })
         .then(async (res) => {
-          const text = await res.text();
-          try {
-            const data = JSON.parse(text);
-            // เช็คโครงสร้างข้อมูลที่ Laravel ชอบส่งมา (อาจจะมีซ้อน .data หรือส่งมาตรงๆ)
-            if (data && data.data) {
-              setProduct(data.data);
-            } else if (data && data.name) {
-              setProduct(data);
-            } else {
-              setProduct(getFallbackProduct(productId));
-            }
-          } catch (error) {
-            console.warn("Backend ส่งข้อมูลมาผิดพลาด ใช้ข้อมูลจำลองแทน");
-            setProduct(getFallbackProduct(productId));
+          if (!res.ok) {
+            setProduct(null);
+            return;
+          }
+          const data = await res.json();
+          if (data && data.data) {
+            setProduct(data.data);
+          } else if (data && data.id) {
+            setProduct(data);
+          } else {
+            setProduct(null);
           }
         })
-        .catch(err => {
+        .catch((err) => {
           console.error('Failed to fetch product:', err);
-          setProduct(getFallbackProduct(productId));
+          setProduct(null);
         })
         .finally(() => {
           setLoading(false);
@@ -64,25 +49,39 @@ export default function ProductDetailPage() {
     }
   }, [productId]);
 
+  // 🟢 ดึงค่าสต็อกจาก stock_quantity เป็นหลัก (รองรับกรณีเป็นเลข 0 ได้ถูกต้อง)
+  const maxStock = product ? Number(product.stock_quantity ?? product.stock ?? 0) : 0;
+  const isOutOfStock = maxStock <= 0;
+
   const handleDecrease = () => {
     if (quantity > 1) setQuantity(quantity - 1);
   };
 
   const handleIncrease = () => {
-    const maxStock = product?.stock || product?.stock_quantity || 99; 
     if (quantity < maxStock) setQuantity(quantity + 1);
   };
 
-  const handleAddToCart = () => {
-    if (product) {
-      addToCart({
+  // 🟢 รอให้ยิง API เข้าตะกร้าเสร็จจริง
+  const handleAddToCart = async (redirectToCart = false) => {
+    if (!product || isOutOfStock || isAdding) return;
+
+    setIsAdding(true);
+    try {
+      await addToCart({
         id: product.id,
         name: product.name,
         price: Number(product.price),
-        image: product.image_url || '/image_289eb4.jpg', 
+        image: product.image_url || '/image_289eb4.jpg',
         quantity: quantity
       });
-      alert('เพิ่มลงตะกร้าสำเร็จ!');
+
+      if (redirectToCart) {
+        router.push('/cart');
+      } else {
+        alert(`เพิ่ม "${product.name}" ลงตะกร้าสำเร็จ!`);
+      }
+    } finally {
+      setIsAdding(false);
     }
   };
 
@@ -102,8 +101,11 @@ export default function ProductDetailPage() {
     return (
       <div className="min-h-screen bg-[#f5f5f5] font-sans flex flex-col">
         <Navbar />
-        <main className="flex-grow flex items-center justify-center">
-          <div className="text-gray-500 font-medium text-lg">ไม่พบข้อมูลสินค้าที่ค้นหา</div>
+        <main className="flex-grow flex flex-col items-center justify-center gap-4">
+          <div className="text-gray-600 font-bold text-lg">ไม่พบข้อมูลสินค้าที่ค้นหา</div>
+          <button onClick={() => router.push('/')} className="bg-[#1B4D3E] text-white px-6 py-2 rounded-sm font-bold text-sm">
+            กลับไปหน้าแรก
+          </button>
         </main>
         <Footer />
       </div>
@@ -119,8 +121,6 @@ export default function ProductDetailPage() {
         <div className="flex items-center text-sm text-gray-600 gap-2">
           <a href="/" className="text-[#1B4D3E] hover:underline">พณาไพรสิน</a>
           <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="m9 18 6-6-6-6"/></svg>
-          <a href="#" className="text-[#1B4D3E] hover:underline">{product.category || 'สินค้าทั่วไป'}</a>
-          <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="m9 18 6-6-6-6"/></svg>
           <span className="text-gray-500 truncate">{product.name}</span>
         </div>
       </div>
@@ -132,13 +132,18 @@ export default function ProductDetailPage() {
             
             {/* Left: Images */}
             <div className="w-full md:w-2/5 shrink-0">
-              <div className="aspect-square w-full bg-gray-100 mb-4 border border-gray-200">
+              <div className="aspect-square w-full bg-gray-100 mb-4 border border-gray-200 relative">
                 <img 
                   src={product.image_url ? `http://localhost:8080/storage/${product.image_url}` : "/image_289eb4.jpg"} 
                   alt={product.name} 
                   className="w-full h-full object-cover" 
                   onError={(e) => { e.currentTarget.src = '/image_289eb4.jpg' }}
                 />
+                {isOutOfStock && (
+                  <div className="absolute inset-0 bg-black/60 flex items-center justify-center">
+                    <span className="text-white font-bold bg-red-600 px-4 py-1.5 rounded-sm uppercase text-sm">สินค้าหมด</span>
+                  </div>
+                )}
               </div>
             </div>
 
@@ -148,7 +153,7 @@ export default function ProductDetailPage() {
               
               <div className="flex items-center gap-4 text-sm mb-4">
                 <div className="flex items-center text-[#1B4D3E] font-medium border-b border-[#1B4D3E]">
-                  <span className="mr-1">{product.rating ? product.rating.toFixed(1) : '5.0'}</span>
+                  <span className="mr-1">{product.rating ? Number(product.rating).toFixed(1) : '5.0'}</span>
                   <div className="flex">
                     {[1, 2, 3, 4, 5].map((star) => (
                       <svg key={star} xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="currentColor" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="text-[#1B4D3E]"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg>
@@ -169,39 +174,60 @@ export default function ProductDetailPage() {
                 <span className="text-gray-500 w-16">จำนวน</span>
                 <div className="flex items-center">
                   <div className="flex border border-gray-300 rounded-sm overflow-hidden h-8">
-                    <button onClick={handleDecrease} className="w-8 flex items-center justify-center hover:bg-gray-100 border-r border-gray-300 text-gray-600 transition">
+                    <button 
+                      type="button"
+                      disabled={isOutOfStock || quantity <= 1}
+                      onClick={handleDecrease} 
+                      className="w-8 flex items-center justify-center hover:bg-gray-100 border-r border-gray-300 text-gray-600 transition disabled:opacity-40"
+                    >
                       <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M5 12h14"/></svg>
                     </button>
                     <input 
                       type="text" 
-                      value={quantity} 
+                      value={isOutOfStock ? 0 : quantity} 
                       readOnly
-                      className="w-12 text-center text-gray-900 focus:outline-none"
+                      className="w-12 text-center text-gray-900 focus:outline-none bg-white"
                     />
-                    <button onClick={handleIncrease} className="w-8 flex items-center justify-center hover:bg-gray-100 border-l border-gray-300 text-gray-600 transition">
+                    <button 
+                      type="button"
+                      disabled={isOutOfStock || quantity >= maxStock}
+                      onClick={handleIncrease} 
+                      className="w-8 flex items-center justify-center hover:bg-gray-100 border-l border-gray-300 text-gray-600 transition disabled:opacity-40"
+                    >
                       <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M5 12h14"/><path d="M12 5v14"/></svg>
                     </button>
                   </div>
-                  <span className="ml-4 text-gray-500">มีสินค้าทั้งหมด {product.stock || product.stock_quantity || 'ไม่จำกัด'} ชิ้น</span>
+                  <span className={`ml-4 font-medium ${isOutOfStock ? 'text-red-600' : 'text-gray-500'}`}>
+                    {isOutOfStock ? 'สินค้าหมดสต็อก' : `มีสินค้าทั้งหมด ${maxStock} ชิ้น`}
+                  </span>
                 </div>
               </div>
 
               <div className="flex gap-4 mt-auto pt-4">
                 <button 
-                  onClick={handleAddToCart}
-                  className="flex items-center justify-center gap-2 border border-[#1B4D3E] bg-[#1B4D3E]/10 text-[#1B4D3E] px-6 py-3 rounded-sm font-medium hover:bg-[#1B4D3E]/20 transition"
+                  type="button"
+                  disabled={isOutOfStock || isAdding}
+                  onClick={() => handleAddToCart(false)}
+                  className={`flex items-center justify-center gap-2 border px-6 py-3 rounded-sm font-medium transition ${
+                    isOutOfStock
+                      ? 'border-gray-300 bg-gray-100 text-gray-400 cursor-not-allowed'
+                      : 'border-[#1B4D3E] bg-[#1B4D3E]/10 text-[#1B4D3E] hover:bg-[#1B4D3E]/20'
+                  }`}
                 >
                   <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="8" cy="21" r="1"/><circle cx="19" cy="21" r="1"/><path d="M2.05 2.05h2l2.66 12.42a2 2 0 0 0 2 1.58h9.78a2 2 0 0 0 1.95-1.57l1.65-7.43H5.12"/><path d="M12 9v6"/><path d="M9 12h6"/></svg>
-                  เพิ่มไปยังรถเข็น
+                  {isAdding ? 'กำลังเพิ่ม...' : 'เพิ่มไปยังรถเข็น'}
                 </button>
                 <button 
-                  onClick={() => {
-                    handleAddToCart();
-                    window.location.href = '/cart';
-                  }}
-                  className="bg-[#1B4D3E] text-white px-10 py-3 rounded-sm font-medium hover:bg-[#143a2f] transition"
+                  type="button"
+                  disabled={isOutOfStock || isAdding}
+                  onClick={() => handleAddToCart(true)}
+                  className={`px-10 py-3 rounded-sm font-medium transition ${
+                    isOutOfStock
+                      ? 'bg-gray-300 text-gray-500 cursor-not-allowed'
+                      : 'bg-[#1B4D3E] text-white hover:bg-[#143a2f]'
+                  }`}
                 >
-                  ซื้อสินค้า
+                  {isOutOfStock ? 'สินค้าหมด' : 'ซื้อสินค้า'}
                 </button>
               </div>
             </div>
@@ -218,12 +244,7 @@ export default function ProductDetailPage() {
               <h3 className="font-medium text-gray-900 text-lg">พณาไพรสิน</h3>
               <p className="text-sm text-gray-500 mb-1">Active เมื่อ 5 นาทีที่ผ่านมา</p>
               <div className="flex gap-2">
-                <button className="flex items-center gap-1 border border-gray-300 text-gray-600 px-3 py-1 text-xs rounded-sm hover:bg-gray-50 transition">
-                  <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>
-                  แชทเลย
-                </button>
                 <a href="/" className="flex items-center gap-1 border border-gray-300 text-gray-600 px-3 py-1 text-xs rounded-sm hover:bg-gray-50 transition">
-                  <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/></svg>
                   ดูร้านค้า
                 </a>
               </div>
@@ -235,7 +256,7 @@ export default function ProductDetailPage() {
         <div className="bg-white rounded-sm shadow-sm p-6">
           <h2 className="bg-gray-50 p-3 text-lg font-medium text-gray-900 mb-4 uppercase">รายละเอียดสินค้า</h2>
           <div className="px-4 text-sm text-gray-700 leading-relaxed whitespace-pre-line">
-            {product.description || 'ไม่มีรายละเอียดสินค้า (สินค้าใหม่ยังไม่ได้อัปเดตข้อมูลเพิ่มเติม)'}
+            {product.description || 'ไม่มีรายละเอียดสินค้าเพิ่มเติม'}
           </div>
         </div>
       </main>
