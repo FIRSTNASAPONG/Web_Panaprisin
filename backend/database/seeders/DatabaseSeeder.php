@@ -23,5 +23,9 @@ class DatabaseSeeder extends Seeder
             'email' => 'test@example.com',
             'role' => 'admin', // สมมติให้ User นี้เป็น admin ไปเลย
         ]);
+        
+        $this->call([
+            CategorySeeder::class,
+        ]);
     }
 }

@@ -13,6 +13,10 @@ class ProductController extends Controller
     // เพิ่มสินค้า
     public function store(Request $request)
     {
+        // ดักไว้ก่อนเลย ถ้าเป็น customer ห้ามเพิ่มสินค้า!
+        if ($request->user()->role === 'buyer') {
+            return response()->json(['message' => 'คุณไม่มีสิทธิ์เพิ่มสินค้า'], 403);
+        }
         // 1. ตรวจสอบข้อมูล (Validation) ป้องกันแฮกเกอร์อัปไฟล์แปลกปลอม
         $request->validate([
             'name' => 'required|string|max:255',
