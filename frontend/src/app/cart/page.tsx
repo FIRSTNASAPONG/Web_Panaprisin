@@ -4,10 +4,11 @@ import React from 'react';
 import Navbar from '../../components/Navbar';
 import Footer from '../../components/Footer';
 import { useCart } from '../../context/CartContext';
+import { useRouter } from 'next/navigation'; // 🟢 จุดที่ 1: ดึงระบบ Router มาใช้พาเปลี่ยนหน้า
 
 export default function CartPage() {
-  // ดึงฟังก์ชันมาใช้ให้หมด
-  const { cart, removeFromCart, clearCart } = useCart();
+  const { cart, removeFromCart, clearCart, updateQuantity } = useCart();
+  const router = useRouter(); // 🟢 จุดที่ 2: เรียกใช้งาน Router
 
   // คำนวณราคารวมทั้งหมดในตะกร้า
   const totalPrice = cart.reduce((total, item) => total + (item.price * item.quantity), 0);
@@ -51,30 +52,51 @@ export default function CartPage() {
                       <div className="col-span-1 md:col-span-6 flex gap-4">
                         <div className="w-20 h-20 bg-gray-100 shrink-0 border border-gray-200">
                           <img 
-                            src={item.image ? `/${item.image}` : "https://placehold.co/400x400/1B4D3E/FFFFFF?text=Product"} 
+                            src={item.image ? `http://localhost:8080/storage/${item.image}` : "/image_289eb4.jpg"} 
                             alt={item.name} 
                             className="w-full h-full object-cover" 
+                            onError={(e) => { e.currentTarget.src = '/image_289eb4.jpg' }}
                           />
                         </div>
                         <div className="flex flex-col justify-between py-1">
                           <h3 className="text-sm font-medium text-gray-900 line-clamp-2">{item.name}</h3>
                           <button 
-                            onClick={() => removeFromCart(item.id)} // ผูกฟังก์ชันลบ
+                            onClick={() => removeFromCart(item.id)}
                             className="text-xs text-red-500 font-medium text-left hover:underline w-max"
                           >
                             ลบ
                           </button>
                         </div>
                       </div>
+                      
                       <div className="col-span-1 md:col-span-2 text-sm text-gray-700 md:text-center hidden md:block">
                         ฿{item.price.toLocaleString()}
                       </div>
+                      
                       <div className="col-span-1 md:col-span-2 flex items-center justify-between md:justify-center">
                         <span className="text-sm text-gray-500 md:hidden">จำนวน:</span>
-                        <div className="w-12 h-8 border border-gray-300 rounded-sm flex items-center justify-center text-sm font-medium bg-gray-50">
-                          {item.quantity}
+                        <div className="flex border border-gray-300 rounded-sm h-8">
+                          <button 
+                            onClick={() => updateQuantity && updateQuantity(item.id, Math.max(1, item.quantity - 1))}
+                            className="w-7 flex items-center justify-center hover:bg-gray-100 border-r border-gray-300 text-gray-600 transition"
+                          >
+                            -
+                          </button>
+                          <input 
+                            type="text" 
+                            value={item.quantity} 
+                            readOnly
+                            className="w-8 text-center text-sm focus:outline-none bg-white text-gray-900"
+                          />
+                          <button 
+                            onClick={() => updateQuantity && updateQuantity(item.id, item.quantity + 1)}
+                            className="w-7 flex items-center justify-center hover:bg-gray-100 border-l border-gray-300 text-gray-600 transition"
+                          >
+                            +
+                          </button>
                         </div>
                       </div>
+
                       <div className="col-span-1 md:col-span-2 text-right font-medium text-[#1B4D3E]">
                         <span className="text-sm text-gray-500 md:hidden mr-2">ยอดรวม:</span>
                         ฿{(item.price * item.quantity).toLocaleString()}
@@ -110,10 +132,7 @@ export default function CartPage() {
                 </div>
 
                 <button 
-                  onClick={() => {
-                    alert('จำลองการสั่งซื้อสำเร็จ ขอบคุณครับ!');
-                    clearCart(); // ล้างตะกร้าหลังกดจ่ายเงิน
-                  }}
+                  onClick={() => router.push('/checkout')} // 🟢 จุดที่ 3: สั่งให้กดแล้วพาวาร์ปไปหน้า /checkout
                   className="w-full bg-[#1B4D3E] text-white py-3 rounded-sm font-bold hover:bg-[#143a2f] shadow-sm transition uppercase text-sm"
                 >
                   ดำเนินการชำระเงิน

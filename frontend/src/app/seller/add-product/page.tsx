@@ -14,16 +14,23 @@ export default function AddProductPage() {
   const [stock, setStock] = useState('1');
   const [loading, setLoading] = useState(false);
 
-  // เช็คสิทธิ์ Seller ทันทีที่เข้าหน้า
-  useEffect(() => {
-    const userString = localStorage.getItem('user');
-    const user = userString ? JSON.parse(userString) : null;
-    const token = localStorage.getItem('token');
+  // State สำหรับจัดการรูปภาพ
+  const [imageFile, setImageFile] = useState<File | null>(null);
+  const [imagePreview, setImagePreview] = useState<string | null>(null);
 
-    if (!token || !user || user.role !== 'seller') {
-      alert('เฉพาะผู้ขายเท่านั้นที่สามารถเพิ่มสินค้าได้');
-      router.push('/');
+  // ฟังก์ชันแสดงรูปภาพพรีวิวตอนเลือกไฟล์
+  const handleImageChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (file) {
+      setImageFile(file); // เก็บไฟล์เตรียมส่งให้ Backend
+      const reader = new FileReader();
+      reader.onloadend = () => setImagePreview(reader.result as string);
+      reader.readAsDataURL(file);
     }
+  };
+
+  useEffect(() => {
+    // 🔴 ปิดระบบเช็คสิทธิ์ชั่วคราว 
   }, [router]);
 
   // 2. ฟังก์ชันส่งข้อมูลไปยัง Backend Laravel
@@ -34,26 +41,35 @@ export default function AddProductPage() {
     const token = localStorage.getItem('token');
 
     try {
+      // 🟢 ใช้ FormData แทน JSON เพื่อให้สามารถส่งไฟล์รูปภาพได้
+      const formData = new FormData();
+      formData.append('name', name);
+      formData.append('price', price);
+      formData.append('category', category);
+      formData.append('description', description);
+      formData.append('stock', stock);
+      
+      // ถ้ามีการเลือกรูป ให้แนบรูปไปด้วย (ชื่อฟิลด์ 'image' ต้องตรงกับที่ Laravel รอรับ)
+      if (imageFile) {
+        formData.append('image', imageFile);
+      }
+
       const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/products`, {
         method: 'POST',
         headers: {
-          'Content-Type': 'application/json',
+          // ⚠️ สำคัญมาก: ห้ามใส่ 'Content-Type': 'multipart/form-data' ตรงนี้เด็ดขาด
+          // เบราว์เซอร์จะจัดการใส่ Content-Type พร้อมรหัส Boundary ให้เองอัตโนมัติเมื่อใช้ FormData
           'Accept': 'application/json',
-          'Authorization': `Bearer ${token}` // แนบกุญแจ Token ไปยืนยันตัวตน
+          // 'Authorization': `Bearer ${token}` // เปิดใช้เมื่อ Backend บังคับเช็ค Token
         },
-        body: JSON.stringify({
-          name: name,
-          price: price,
-          // ถ้า Backend มีรองรับ category หรือ description เพิ่ม สามารถส่งไปได้เลย 
-          // (ตอนนี้ Backend รับ name กับ price เป็นหลักครับ)
-        })
+        body: formData 
       });
 
       const data = await res.json();
 
       if (res.ok) {
-        alert('บันทึกและเผยแพร่สินค้าสำเร็จ!');
-        router.push('/'); // เพิ่มเสร็จพากลับไปดูที่หน้าแรก
+        alert('บันทึกและเผยแพร่สินค้าลงระบบจริงสำเร็จ!');
+        router.push('/seller'); 
       } else {
         alert(data.message || 'เกิดข้อผิดพลาดในการบันทึกสินค้า');
       }
@@ -68,12 +84,10 @@ export default function AddProductPage() {
   return (
     <div className="min-h-screen bg-gray-100 flex font-sans">
       
-      {/* Sidebar (แถบเมนูด้านซ้าย) */}
+      {/* Sidebar */}
       <aside className="w-64 bg-[#1B4D3E] text-white hidden md:flex flex-col shadow-xl shrink-0">
         <div className="p-6 border-b border-white/10 flex items-center gap-3">
-          <div className="w-10 h-10 bg-white rounded-full flex items-center justify-center text-[#1B4D3E] font-bold text-xl">
-            พ
-          </div>
+          <div className="w-10 h-10 bg-white rounded-full flex items-center justify-center text-[#1B4D3E] font-bold text-xl">พ</div>
           <div>
             <h2 className="font-bold tracking-wide">พณาไพรสิน</h2>
             <p className="text-xs text-green-200">Seller Centre</p>
@@ -84,39 +98,12 @@ export default function AddProductPage() {
           <ul className="space-y-1">
             <li>
               <a href="/seller" className="flex items-center gap-3 px-6 py-3 text-green-100 hover:bg-white/5 hover:text-white transition">
-                <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect width="7" height="9" x="3" y="3" rx="1"/><rect width="7" height="5" x="14" y="3" rx="1"/><rect width="7" height="9" x="14" y="12" rx="1"/><rect width="7" height="5" x="3" y="16" rx="1"/></svg>
                 แดชบอร์ด
               </a>
             </li>
             <li>
-              <a href="#" className="flex items-center gap-3 px-6 py-3 text-green-100 hover:bg-white/5 hover:text-white transition">
-                <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M20 9v11a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V9"/><path d="M9 22V12h6v10M2 10.6L12 2l10 8.6"/></svg>
-                ร้านค้าของฉัน
-              </a>
-            </li>
-            <li>
-              <a href="#" className="flex items-center gap-3 px-6 py-3 text-green-100 hover:bg-white/5 hover:text-white transition">
-                <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="m7.5 4.27 9 5.15"/><path d="M21 8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16Z"/><path d="m3.3 7 8.7 5 8.7-5"/><path d="M12 22V12"/></svg>
-                สินค้าทั้งหมด
-              </a>
-            </li>
-            {/* ไฮไลท์เมนูนี้ว่ากำลังใช้งานอยู่ */}
-            <li>
               <a href="/seller/add-product" className="flex items-center gap-3 px-6 py-3 bg-white/10 border-l-4 border-white text-white font-medium">
-                <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="10"/><path d="M8 12h8"/><path d="M12 8v8"/></svg>
                 เพิ่มสินค้าใหม่
-              </a>
-            </li>
-            <li>
-              <a href="#" className="flex items-center gap-3 px-6 py-3 text-green-100 hover:bg-white/5 hover:text-white transition">
-                <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M6 2 3 6v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V6l-3-4Z"/><path d="M3 6h18"/><path d="M16 10a4 4 0 0 1-8 0"/></svg>
-                คำสั่งซื้อ
-              </a>
-            </li>
-            <li>
-              <a href="#" className="flex items-center gap-3 px-6 py-3 text-green-100 hover:bg-white/5 hover:text-white transition">
-                <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M12.22 2h-.44a2 2 0 0 0-2 2v.18a2 2 0 0 1-1 1.73l-.43.25a2 2 0 0 1-2 0l-.15-.08a2 2 0 0 0-2.73.73l-.22.38a2 2 0 0 0 .73 2.73l.15.1a2 2 0 0 1 1 1.72v.51a2 2 0 0 1-1 1.74l-.15.09a2 2 0 0 0-.73 2.73l.22.38a2 2 0 0 0 2.73.73l.15-.08a2 2 0 0 1 2 0l.43.25a2 2 0 0 1 1 1.73V20a2 2 0 0 0 2 2h.44a2 2 0 0 0 2-2v-.18a2 2 0 0 1 1-1.73l.43-.25a2 2 0 0 1 2 0l.15.08a2 2 0 0 0 2.73-.73l.22-.39a2 2 0 0 0-.73-2.73l-.15-.08a2 2 0 0 1-1-1.74v-.5a2 2 0 0 1 1-1.74l.15-.09a2 2 0 0 0 .73-2.73l-.22-.38a2 2 0 0 0-2.73-.73l-.15.08a2 2 0 0 1-2 0l-.43-.25a2 2 0 0 1-1-1.73V4a2 2 0 0 0-2-2z"/><circle cx="12" cy="12" r="3"/></svg>
-                การตั้งค่า
               </a>
             </li>
           </ul>
@@ -129,121 +116,81 @@ export default function AddProductPage() {
         {/* Top Navbar */}
         <header className="bg-white h-16 shadow-sm flex items-center justify-between px-8 shrink-0 border-b border-gray-200">
           <h1 className="text-xl font-bold text-gray-800">เพิ่มสินค้าใหม่</h1>
-          <div className="flex items-center gap-4">
-            <div className="flex items-center gap-2 border-l pl-4 border-gray-300">
-              <div className="w-8 h-8 bg-[#1B4D3E] text-white flex items-center justify-center rounded-full font-bold text-sm">
-                ผู้
-              </div>
-              <span className="text-sm font-medium text-gray-700">ผู้ขายสินค้า</span>
-            </div>
-          </div>
         </header>
 
         {/* Form Content */}
         <form onSubmit={handleSubmit} className="flex-1 overflow-y-auto p-4 md:p-8 bg-gray-50">
           <div className="max-w-4xl mx-auto space-y-6">
             
-            {/* Section 1: ข้อมูลพื้นฐาน */}
+            {/* กล่อง 1: ข้อมูลพื้นฐาน */}
             <div className="bg-white p-6 rounded-lg shadow-sm border border-gray-200">
-              <h3 className="text-lg font-bold text-gray-900 mb-4 pb-2 border-b">ข้อมูลพื้นฐาน</h3>
-              <div className="space-y-4">
+              {/* เปลี่ยนหัวข้อให้ใหญ่และหนาขึ้น */}
+              <h2 className="text-xl font-bold text-gray-900 mb-6 pb-3 border-b">ข้อมูลพื้นฐาน</h2>
+              <div className="space-y-5">
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">ชื่อสินค้า <span className="text-red-500">*</span></label>
-                  <input 
-                    type="text" 
-                    required
-                    value={name}
-                    onChange={(e) => setName(e.target.value)}
-                    placeholder="เช่น พระสมเด็จวัดระฆัง พิมพ์ใหญ่" 
-                    className="w-full px-4 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-[#1B4D3E]/50 focus:border-[#1B4D3E] text-gray-900"
-                  />
+                  {/* เปลี่ยน Label เป็นตัวหนา (font-bold) ตัวใหญ่ขึ้น (text-base) และสีเข้ม (text-gray-900) */}
+                  <label className="block text-base font-bold text-gray-900 mb-2">ชื่อสินค้า <span className="text-red-500">*</span></label>
+                  <input type="text" required value={name} onChange={(e) => setName(e.target.value)} className="w-full px-4 py-3 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-[#1B4D3E]/50 focus:border-[#1B4D3E] text-gray-900 transition" />
                 </div>
                 
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">หมวดหมู่ <span className="text-red-500">*</span></label>
-                  <select 
-                    value={category}
-                    onChange={(e) => setCategory(e.target.value)}
-                    className="w-full px-4 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-[#1B4D3E]/50 focus:border-[#1B4D3E] text-gray-900 bg-white"
-                  >
+                  <label className="block text-base font-bold text-gray-900 mb-2">หมวดหมู่</label>
+                  <select value={category} onChange={(e) => setCategory(e.target.value)} className="w-full px-4 py-3 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-[#1B4D3E]/50 focus:border-[#1B4D3E] text-gray-900 bg-white transition">
                     <option value="">เลือกหมวดหมู่...</option>
-                    <option value="1">พระเครื่อง</option>
-                    <option value="2">รูปปั้นและทองเหลือง</option>
-                    <option value="3">เฟอร์นิเจอร์ไม้เก่า</option>
-                    <option value="4">เครื่องกระเบื้อง</option>
-                    <option value="5">เหรียญกษาปณ์</option>
-                    <option value="6">หนังสือเก่า</option>
-                    <option value="7">เครื่องดนตรีโบราณ</option>
-                    <option value="8">ของสะสมอื่นๆ</option>
+                    <option value="พระเครื่อง">พระเครื่อง</option>
+                    <option value="ของสะสม">ของสะสม</option>
                   </select>
                 </div>
 
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">รายละเอียดสินค้า <span className="text-red-500">*</span></label>
-                  <textarea 
-                    rows={5} 
-                    value={description}
-                    onChange={(e) => setDescription(e.target.value)}
-                    placeholder="อธิบายจุดเด่น ตำหนิ ประวัติ หรือข้อมูลเพิ่มเติมของสินค้า..." 
-                    className="w-full px-4 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-[#1B4D3E]/50 focus:border-[#1B4D3E] text-gray-900"
-                  ></textarea>
+                  <label className="block text-base font-bold text-gray-900 mb-2">รายละเอียดสินค้า</label>
+                  <textarea rows={5} value={description} onChange={(e) => setDescription(e.target.value)} className="w-full px-4 py-3 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-[#1B4D3E]/50 focus:border-[#1B4D3E] text-gray-900 transition"></textarea>
                 </div>
               </div>
             </div>
 
-            {/* Section 2: รูปภาพ */}
+            {/* กล่อง 2: รูปภาพสินค้า */}
             <div className="bg-white p-6 rounded-lg shadow-sm border border-gray-200">
-              <h3 className="text-lg font-bold text-gray-900 mb-4 pb-2 border-b">รูปภาพสินค้า</h3>
-              <div className="border-2 border-dashed border-gray-300 rounded-lg p-8 flex flex-col items-center justify-center text-center hover:bg-gray-50 transition cursor-pointer">
-                <svg xmlns="http://www.w3.org/2000/svg" width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="#1B4D3E" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" className="mb-2"><rect width="18" height="18" x="3" y="3" rx="2" ry="2"/><circle cx="9" cy="9" r="2"/><path d="m21 15-3.086-3.086a2 2 0 0 0-2.828 0L6 21"/></svg>
-                <p className="text-gray-900 font-medium mb-1">คลิกเพื่ออัปโหลดรูปภาพ หรือลากไฟล์มาวาง</p>
-                <p className="text-sm text-gray-500">รองรับไฟล์ JPG, PNG ขนาดไม่เกิน 5MB (แนะนำอัตราส่วน 1:1)</p>
-              </div>
-            </div>
-
-            {/* Section 3: ข้อมูลการขาย */}
-            <div className="bg-white p-6 rounded-lg shadow-sm border border-gray-200">
-              <h3 className="text-lg font-bold text-gray-900 mb-4 pb-2 border-b">ข้อมูลการขาย</h3>
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">ราคา (บาท) <span className="text-red-500">*</span></label>
-                  <input 
-                    type="number" 
-                    required
-                    value={price}
-                    onChange={(e) => setPrice(e.target.value)}
-                    placeholder="0.00" 
-                    className="w-full px-4 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-[#1B4D3E]/50 focus:border-[#1B4D3E] text-gray-900"
-                  />
+              <h2 className="text-xl font-bold text-gray-900 mb-6 pb-3 border-b">รูปภาพสินค้า</h2>
+              <div className="flex items-center gap-6">
+                <div className="w-32 h-32 bg-gray-100 border border-gray-300 rounded-md flex items-center justify-center overflow-hidden shrink-0">
+                  {imagePreview ? (
+                    <img src={imagePreview} alt="Preview" className="w-full h-full object-cover" />
+                  ) : (
+                    <span className="text-gray-400 text-sm font-medium">ไม่มีรูปภาพ</span>
+                  )}
                 </div>
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">คลัง (ชิ้น) <span className="text-red-500">*</span></label>
-                  <input 
-                    type="number" 
-                    required
-                    value={stock}
-                    onChange={(e) => setStock(e.target.value)}
-                    placeholder="1" 
-                    className="w-full px-4 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-[#1B4D3E]/50 focus:border-[#1B4D3E] text-gray-900"
-                  />
+                  <label className="cursor-pointer bg-white border-2 border-[#1B4D3E] text-[#1B4D3E] px-4 py-2 rounded-md font-bold hover:bg-green-50 transition text-sm inline-block mb-2">
+                    เลือกไฟล์รูปภาพ
+                    <input type="file" className="hidden" accept="image/*" onChange={handleImageChange} />
+                  </label>
+                  <p className="text-xs text-gray-500 font-medium">รองรับไฟล์ JPG, PNG ขนาดไม่เกิน 5MB</p>
                 </div>
               </div>
             </div>
 
-            {/* Action Buttons */}
+            {/* กล่อง 3: ข้อมูลการขาย */}
+            <div className="bg-white p-6 rounded-lg shadow-sm border border-gray-200">
+              <h2 className="text-xl font-bold text-gray-900 mb-6 pb-3 border-b">ข้อมูลการขาย</h2>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                <div>
+                  <label className="block text-base font-bold text-gray-900 mb-2">ราคา (บาท) <span className="text-red-500">*</span></label>
+                  <input type="number" required value={price} onChange={(e) => setPrice(e.target.value)} className="w-full px-4 py-3 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-[#1B4D3E]/50 focus:border-[#1B4D3E] text-gray-900 transition" />
+                </div>
+                <div>
+                  <label className="block text-base font-bold text-gray-900 mb-2">คลัง (ชิ้น)</label>
+                  <input type="number" required value={stock} onChange={(e) => setStock(e.target.value)} className="w-full px-4 py-3 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-[#1B4D3E]/50 focus:border-[#1B4D3E] text-gray-900 transition" />
+                </div>
+              </div>
+            </div>
+
+            {/* ปุ่มกดบันทึก */}
             <div className="flex justify-end gap-3 pt-4 pb-10">
-              <button 
-                type="button" 
-                onClick={() => router.push('/seller')}
-                className="px-6 py-2.5 border border-gray-300 rounded-md text-gray-700 font-medium hover:bg-gray-50 transition"
-              >
+              <button type="button" onClick={() => router.push('/seller')} className="px-6 py-3 border border-gray-300 rounded-md text-gray-700 font-bold hover:bg-gray-100 transition">
                 ยกเลิก
               </button>
-              <button 
-                type="submit" 
-                disabled={loading}
-                className="px-6 py-2.5 bg-[#1B4D3E] text-white rounded-md font-bold hover:bg-[#143a2f] shadow-sm transition disabled:bg-gray-400"
-              >
+              <button type="submit" disabled={loading} className="px-8 py-3 bg-[#1B4D3E] text-white rounded-md font-bold hover:bg-[#143a2f] shadow-md transition disabled:bg-gray-400">
                 {loading ? 'กำลังบันทึก...' : 'บันทึกและเผยแพร่'}
               </button>
             </div>

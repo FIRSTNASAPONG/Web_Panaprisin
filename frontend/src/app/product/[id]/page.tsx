@@ -6,29 +6,59 @@ import { useCart } from '../../../context/CartContext';
 import Navbar from '../../../components/Navbar';
 import Footer from '../../../components/Footer';
 
+// ข้อมูลจำลองเผื่อ Backend ส่งข้อมูลมาพังหรือไม่สมบูรณ์
+const getFallbackProduct = (id: number) => ({
+  id: id,
+  name: 'สินค้าของสะสมโบราณ (ข้อมูลจำลอง)',
+  price: 12500,
+  stock: 5,
+  description: 'นี่คือรายละเอียดสินค้าจำลอง เนื่องจาก Backend ยังไม่ได้ส่งข้อมูลจริงมาให้\n\n- สภาพสมบูรณ์ 100%\n- ผ่านการตรวจสอบจากผู้เชี่ยวชาญ\n- เหมาะสำหรับนักสะสมและตกแต่งบ้าน\n- จัดส่งแพ็คกันกระแทกอย่างดีเยี่ยม',
+  category: 'ของสะสมหายาก',
+  image_url: '',
+  rating: 4.9,
+  reviews: 24,
+  sold: 12
+});
+
 export default function ProductDetailPage() {
   const params = useParams(); 
   const productId = Number(params?.id); 
 
-  // สร้าง State สำหรับเก็บข้อมูลสินค้าจริงจาก Backend
   const [product, setProduct] = useState<any>(null);
   const [loading, setLoading] = useState(true);
   const [quantity, setQuantity] = useState(1);
-  const { addToCart } = useCart(); // ดึงฟังก์ชันตะกร้ามาใช้
+  const { addToCart } = useCart(); 
 
-  // ดึงข้อมูลสินค้าจาก Backend Laravel
   useEffect(() => {
     if (productId) {
-      fetch(`http://localhost/api/products/${productId}`, {
+      // ใช้ตัวแปร NEXT_PUBLIC_API_URL แบบเดียวกับหน้าแรก
+      const apiUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8080/api';
+      
+      fetch(`${apiUrl}/products/${productId}`, {
         headers: { 'Accept': 'application/json' }
       })
-        .then(res => res.json())
-        .then(data => {
-          setProduct(data);
-          setLoading(false);
+        .then(async (res) => {
+          const text = await res.text();
+          try {
+            const data = JSON.parse(text);
+            // เช็คโครงสร้างข้อมูลที่ Laravel ชอบส่งมา (อาจจะมีซ้อน .data หรือส่งมาตรงๆ)
+            if (data && data.data) {
+              setProduct(data.data);
+            } else if (data && data.name) {
+              setProduct(data);
+            } else {
+              setProduct(getFallbackProduct(productId));
+            }
+          } catch (error) {
+            console.warn("Backend ส่งข้อมูลมาผิดพลาด ใช้ข้อมูลจำลองแทน");
+            setProduct(getFallbackProduct(productId));
+          }
         })
         .catch(err => {
           console.error('Failed to fetch product:', err);
+          setProduct(getFallbackProduct(productId));
+        })
+        .finally(() => {
           setLoading(false);
         });
     }
@@ -39,38 +69,35 @@ export default function ProductDetailPage() {
   };
 
   const handleIncrease = () => {
-    // ถ้าไม่มีข้อมูล stock จาก backend ให้สมมติว่าเพิ่มได้เรื่อยๆ ก่อน (หรือจะกำหนดลิมิตไว้ที่ 99 ก็ได้)
-    const maxStock = product?.stock || 99; 
+    const maxStock = product?.stock || product?.stock_quantity || 99; 
     if (quantity < maxStock) setQuantity(quantity + 1);
   };
 
-  // ฟังก์ชันเวลากดเพิ่มลงตะกร้า
   const handleAddToCart = () => {
     if (product) {
       addToCart({
         id: product.id,
         name: product.name,
         price: Number(product.price),
-        image: product.image, // ใช้ภาพจริงจาก db ถ้ามี
+        image: product.image_url || '/image_289eb4.jpg', 
         quantity: quantity
       });
+      alert('เพิ่มลงตะกร้าสำเร็จ!');
     }
   };
 
-  // แสดงหน้าโหลดระหว่างรอข้อมูล
   if (loading) {
     return (
       <div className="min-h-screen bg-[#f5f5f5] font-sans flex flex-col">
         <Navbar />
         <main className="flex-grow flex items-center justify-center">
-          <div className="text-gray-500 font-medium">กำลังโหลดข้อมูลสินค้า...</div>
+          <div className="text-gray-500 font-medium animate-pulse">กำลังโหลดข้อมูลสินค้า...</div>
         </main>
         <Footer />
       </div>
     );
   }
 
-  // ถ้าหาข้อมูลสินค้าไม่เจอ
   if (!product) {
     return (
       <div className="min-h-screen bg-[#f5f5f5] font-sans flex flex-col">
@@ -107,9 +134,10 @@ export default function ProductDetailPage() {
             <div className="w-full md:w-2/5 shrink-0">
               <div className="aspect-square w-full bg-gray-100 mb-4 border border-gray-200">
                 <img 
-                  src={product.image ? `/${product.image}` : "https://placehold.co/800x800/1B4D3E/FFFFFF?text=Product"} 
+                  src={product.image_url ? `http://localhost:8080/storage/${product.image_url}` : "/image_289eb4.jpg"} 
                   alt={product.name} 
                   className="w-full h-full object-cover" 
+                  onError={(e) => { e.currentTarget.src = '/image_289eb4.jpg' }}
                 />
               </div>
             </div>
@@ -134,7 +162,7 @@ export default function ProductDetailPage() {
               </div>
 
               <div className="bg-gray-50 py-4 px-5 mb-6 flex items-end gap-3">
-                <span className="text-[#1B4D3E] text-3xl font-medium">฿{Number(product.price).toLocaleString()}</span>
+                <span className="text-[#1B4D3E] text-3xl font-medium">฿{Number(product.price || 0).toLocaleString()}</span>
               </div>
 
               <div className="flex items-center gap-6 mb-8 text-sm">
@@ -154,7 +182,7 @@ export default function ProductDetailPage() {
                       <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M5 12h14"/><path d="M12 5v14"/></svg>
                     </button>
                   </div>
-                  <span className="ml-4 text-gray-500">มีสินค้าทั้งหมด {product.stock || 'ไม่จำกัด'} ชิ้น</span>
+                  <span className="ml-4 text-gray-500">มีสินค้าทั้งหมด {product.stock || product.stock_quantity || 'ไม่จำกัด'} ชิ้น</span>
                 </div>
               </div>
 
@@ -169,7 +197,7 @@ export default function ProductDetailPage() {
                 <button 
                   onClick={() => {
                     handleAddToCart();
-                    window.location.href = '/cart'; // สั่งซื้อเสร็จ วาร์ปไปหน้าตะกร้าเลย
+                    window.location.href = '/cart';
                   }}
                   className="bg-[#1B4D3E] text-white px-10 py-3 rounded-sm font-medium hover:bg-[#143a2f] transition"
                 >

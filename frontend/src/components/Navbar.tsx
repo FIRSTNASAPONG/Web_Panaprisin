@@ -2,20 +2,17 @@
 
 import React, { useState, useEffect } from 'react';
 import { useCart } from '../context/CartContext';
-import { useRouter } from 'next/navigation'; // เพิ่มบรรทัดนี้สำหรับฟังก์ชัน Logout
+import { useRouter } from 'next/navigation'; 
 
 export default function Navbar() {
-  const { cart } = useCart(); // เปลี่ยนจาก cartCount เป็นดึง cart มาตรงๆ เพื่อคำนวณชิ้น
+  const { cart } = useCart(); 
   const router = useRouter();
 
-  // สร้าง State สำหรับเก็บข้อมูล user 
   const [user, setUser] = useState<any>(null);
-  const [mounted, setMounted] = useState(false); // ป้องกัน Error hydration ของ Next.js
+  const [mounted, setMounted] = useState(false);
 
-  // คำนวณจำนวนชิ้นทั้งหมดในตะกร้า (เอา quantity มาบวกกัน)
   const totalItems = cart.reduce((total, item) => total + item.quantity, 0);
 
-  // ดึงข้อมูล User จาก LocalStorage เมื่อโหลดหน้า
   useEffect(() => {
     setMounted(true);
     const userString = localStorage.getItem('user');
@@ -24,7 +21,6 @@ export default function Navbar() {
     }
   }, []);
 
-  // ฟังก์ชันกดปุ่มออกจากระบบ
   const handleLogout = () => {
     localStorage.removeItem('token');
     localStorage.removeItem('user');
@@ -37,7 +33,6 @@ export default function Navbar() {
 
   return (
     <>
-      {/* Top Bar */}
       <div className="bg-[#143a2f] text-white text-sm py-1">
         <div className="container mx-auto px-4 flex justify-between items-center max-w-6xl">
           <div className="flex space-x-4">
@@ -58,10 +53,10 @@ export default function Navbar() {
               ไทย
             </a>
             
-            {/* เช็คว่าล็อกอินหรือยัง เพื่อแสดงชื่อหรือปุ่ม Login */}
             {user ? (
               <>
-                <span className="font-bold text-green-200 ml-2">สวัสดี, {user.name}</span>
+                {/* 🔴 แก้ไขตรงนี้: เปลี่ยน user.name เป็น user.first_name */}
+                <span className="font-bold text-green-200 ml-2">สวัสดี, {user.first_name}</span>
                 <span className="border-l border-gray-500 h-3"></span>
                 <button onClick={handleLogout} className="hover:text-red-300 transition text-sm">ออกจากระบบ</button>
               </>
@@ -76,7 +71,6 @@ export default function Navbar() {
         </div>
       </div>
 
-      {/* Main Header */}
       <header className="bg-[#1B4D3E] text-white pt-6 pb-4 sticky top-0 z-50 shadow-md border-b border-gray-200">
         <div className="container mx-auto px-4 max-w-6xl">
           <div className="flex items-center justify-between gap-8">
@@ -95,11 +89,8 @@ export default function Navbar() {
               </div>
             </div>
 
-            {/* ส่วนไอคอนตะกร้าพร้อมตัวเลข */}
             <a href="/cart" className="flex-shrink-0 mr-4 cursor-pointer hover:opacity-80 transition relative block">
               <svg xmlns="http://www.w3.org/2000/svg" width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="8" cy="21" r="1"/><circle cx="19" cy="21" r="1"/><path d="M2.05 2.05h2l2.66 12.42a2 2 0 0 0 2 1.58h9.78a2 2 0 0 0 1.95-1.57l1.65-7.43H5.12"/></svg>
-              
-              {/* เปลี่ยนมาใช้ตัวแปร totalItems แทน cartCount */}
               {totalItems > 0 && (
                 <span className="absolute -top-2 -right-2 bg-red-500 text-white text-xs font-bold w-5 h-5 flex items-center justify-center rounded-full border-2 border-[#1B4D3E]">
                   {totalItems > 99 ? '99+' : totalItems}

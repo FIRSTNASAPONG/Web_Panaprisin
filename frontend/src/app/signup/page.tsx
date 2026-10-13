@@ -2,73 +2,70 @@
 
 import React, { useState } from 'react';
 import { useRouter } from 'next/navigation';
+import api from '@/lib/axios'; // นำเข้า axios ที่เราตั้งค่าไว้
 
 export default function SignupPage() {
-  // สร้าง State สำหรับเก็บค่าจากฟอร์ม
-  const [name, setName] = useState('');
+  // แยก name เป็น firstName และ lastName
+  const [firstName, setFirstName] = useState('');
+  const [lastName, setLastName] = useState('');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [passwordConfirmation, setPasswordConfirmation] = useState('');
-  const [role, setRole] = useState('buyer'); // ค่าเริ่มต้นเป็น buyer
+  const [role, setRole] = useState('buyer'); 
   const [errorMessage, setErrorMessage] = useState('');
+  const [isLoading, setIsLoading] = useState(false);
 
   const router = useRouter();
 
-  // ฟังก์ชันจัดการเมื่อกดปุ่ม "สมัครสมาชิก"
   const handleSignup = async (e: React.FormEvent) => {
     e.preventDefault();
     setErrorMessage('');
-
-    // เช็ครหัสผ่านให้ตรงกัน
+    
     if (password !== passwordConfirmation) {
       setErrorMessage('รหัสผ่านและการยืนยันรหัสผ่านไม่ตรงกัน');
       return;
     }
+    
+    setIsLoading(true);
 
     try {
-      const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/register`, {
-        method: 'POST',
-        headers: { 
-          'Content-Type': 'application/json',
-          'Accept': 'application/json'
-        },
-        body: JSON.stringify({ 
-          name, 
-          email, 
-          password, 
-          password_confirmation: passwordConfirmation, 
-          role 
-        })
+      // 🟢 จับชื่อและนามสกุลมาต่อกัน คั่นด้วยช่องว่าง เพื่อส่งเป็นตัวแปร name ตัวเดียวตามที่ Backend ต้องการ
+      const fullName = `${firstName} ${lastName}`.trim();
+
+      const res = await api.post('/register', { 
+        name: fullName, 
+        email, 
+        password, 
+        password_confirmation: passwordConfirmation, 
+        role 
       });
       
-      const data = await res.json();
+      const data = res.data;
       
-      if (res.ok) {
-        // หากสมัครสำเร็จ: เก็บ Token ลงใน localStorage ของเบราว์เซอร์
-        localStorage.setItem('token', data.access_token);
-        localStorage.setItem('user', JSON.stringify(data.user));
-        
-        alert('สมัครสมาชิกสำเร็จ!');
-        
-        // เช็ค Role เพื่อพาไปหน้าแรก หรือหน้าผู้ขาย
-        if (role === 'seller') {
-          router.push('/seller');
-        } else {
-          router.push('/');
-        }
+      // เก็บ Token ของจริงไว้ใช้งาน
+      localStorage.setItem('token', data.access_token || data.token);
+      localStorage.setItem('user', JSON.stringify(data.user));
+      
+      alert('สมัครสมาชิกสำเร็จ!');
+      
+      if (role === 'seller') {
+        router.push('/seller');
       } else {
-        // หากสมัครไม่สำเร็จ (อีเมลซ้ำ, พาสเวิร์ดสั้นไป)
-        setErrorMessage(data.message || 'ข้อมูลไม่ถูกต้อง หรืออีเมลนี้ถูกใช้งานแล้ว');
+        router.push('/');
       }
-    } catch (error) {
+      
+    } catch (error: any) {
       console.error('Signup error:', error);
-      setErrorMessage('ไม่สามารถเชื่อมต่อกับเซิร์ฟเวอร์ได้');
+      // ดึงข้อความ Error แบบละเอียดจาก Backend (ถ้ามี) มาแสดง
+      const backendError = error.response?.data?.message || 'ข้อมูลไม่ถูกต้อง หรืออีเมลนี้ถูกใช้งานแล้ว';
+      setErrorMessage(backendError);
+    } finally {
+      setIsLoading(false);
     }
   };
 
   return (
     <div className="min-h-screen bg-[#f5f5f5] flex flex-col font-sans">
-      {/* Header */}
       <header className="bg-white py-5 shadow-sm">
         <div className="container mx-auto px-4 max-w-5xl flex justify-between items-center">
           <div className="flex items-center gap-4">
@@ -78,40 +75,44 @@ export default function SignupPage() {
         </div>
       </header>
 
-      {/* Main Content */}
       <div className="bg-[#1B4D3E] flex-grow flex items-center py-10">
         <div className="container mx-auto px-4 max-w-5xl flex justify-center md:justify-between items-center gap-8">
           
-          {/* Left Image Section */}
           <div className="hidden md:block w-3/5 h-[480px]">
             <img 
               src="/image_289eb4.jpg" 
               alt="ของเก่าโบราณ พณาไพรสิน" 
               className="w-full h-full object-cover rounded-md shadow-2xl border-4 border-white/10"
+              onError={(e) => { e.currentTarget.src = 'https://placehold.co/600x800/1B4D3E/FFFFFF?text=Panaprisin' }}
             />
           </div>
 
-          {/* Right Form Section */}
           <div className="w-full max-w-[400px] bg-white rounded-sm shadow-xl p-8">
             <h2 className="text-xl text-gray-900 font-bold mb-6">สมัครสมาชิก</h2>
             
-            {/* แสดงข้อความ Error ถ้ามี */}
             {errorMessage && (
-              <div className="bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded relative mb-4 text-sm font-medium">
+              <div className="bg-red-50 border-l-4 border-red-500 text-red-700 px-4 py-3 rounded-sm mb-6 text-sm font-medium shadow-sm">
                 {errorMessage}
               </div>
             )}
 
-            {/* ผูกฟังก์ชัน handleSignup กับฟอร์ม */}
             <form className="space-y-4" onSubmit={handleSignup}>
-              <div>
+              <div className="flex gap-2">
                 <input 
                   type="text" 
-                  value={name}
-                  onChange={(e) => setName(e.target.value)}
-                  placeholder="ชื่อผู้ใช้ (Name)" 
+                  value={firstName}
+                  onChange={(e) => setFirstName(e.target.value)}
+                  placeholder="ชื่อ (First Name)" 
                   required
-                  className="w-full px-4 py-3 border border-gray-400 rounded-sm focus:outline-none focus:border-[#1B4D3E] text-sm text-gray-900 placeholder-gray-500 font-medium"
+                  className="w-1/2 px-4 py-3 border border-gray-300 rounded-sm focus:outline-none focus:ring-2 focus:ring-[#1B4D3E]/30 focus:border-[#1B4D3E] text-sm text-gray-900 placeholder-gray-400 font-medium transition"
+                />
+                <input 
+                  type="text" 
+                  value={lastName}
+                  onChange={(e) => setLastName(e.target.value)}
+                  placeholder="นามสกุล (Last Name)" 
+                  required
+                  className="w-1/2 px-4 py-3 border border-gray-300 rounded-sm focus:outline-none focus:ring-2 focus:ring-[#1B4D3E]/30 focus:border-[#1B4D3E] text-sm text-gray-900 placeholder-gray-400 font-medium transition"
                 />
               </div>
               <div>
@@ -121,7 +122,7 @@ export default function SignupPage() {
                   onChange={(e) => setEmail(e.target.value)}
                   placeholder="อีเมล (Email)" 
                   required
-                  className="w-full px-4 py-3 border border-gray-400 rounded-sm focus:outline-none focus:border-[#1B4D3E] text-sm text-gray-900 placeholder-gray-500 font-medium"
+                  className="w-full px-4 py-3 border border-gray-300 rounded-sm focus:outline-none focus:ring-2 focus:ring-[#1B4D3E]/30 focus:border-[#1B4D3E] text-sm text-gray-900 placeholder-gray-400 font-medium transition"
                 />
               </div>
               <div>
@@ -132,7 +133,7 @@ export default function SignupPage() {
                   placeholder="รหัสผ่าน (Password - ขั้นต่ำ 8 ตัว)" 
                   required
                   minLength={8}
-                  className="w-full px-4 py-3 border border-gray-400 rounded-sm focus:outline-none focus:border-[#1B4D3E] text-sm text-gray-900 placeholder-gray-500 font-medium"
+                  className="w-full px-4 py-3 border border-gray-300 rounded-sm focus:outline-none focus:ring-2 focus:ring-[#1B4D3E]/30 focus:border-[#1B4D3E] text-sm text-gray-900 placeholder-gray-400 font-medium transition"
                 />
               </div>
               <div>
@@ -143,11 +144,10 @@ export default function SignupPage() {
                   placeholder="ยืนยันรหัสผ่าน (Confirm Password)" 
                   required
                   minLength={8}
-                  className="w-full px-4 py-3 border border-gray-400 rounded-sm focus:outline-none focus:border-[#1B4D3E] text-sm text-gray-900 placeholder-gray-500 font-medium"
+                  className="w-full px-4 py-3 border border-gray-300 rounded-sm focus:outline-none focus:ring-2 focus:ring-[#1B4D3E]/30 focus:border-[#1B4D3E] text-sm text-gray-900 placeholder-gray-400 font-medium transition"
                 />
               </div>
 
-              {/* ส่วนเลือกประเภทผู้ใช้งาน (Buyer / Seller) */}
               <div className="flex items-center space-x-4 py-2">
                 <label className="flex items-center cursor-pointer">
                   <input 
@@ -173,9 +173,14 @@ export default function SignupPage() {
               
               <button 
                 type="submit"
-                className="w-full bg-[#1B4D3E] text-white py-3 rounded-sm font-bold hover:bg-[#143a2f] transition shadow-sm uppercase mt-2"
+                disabled={isLoading}
+                className={`w-full py-3 rounded-sm font-bold shadow-sm uppercase mt-2 transition ${
+                  isLoading 
+                    ? 'bg-gray-400 text-gray-100 cursor-not-allowed' 
+                    : 'bg-[#1B4D3E] text-white hover:bg-[#143a2f]'
+                }`}
               >
-                สมัครสมาชิก
+                {isLoading ? 'กำลังบันทึกข้อมูล...' : 'สมัครสมาชิก'}
               </button>
             </form>
 
@@ -190,8 +195,7 @@ export default function SignupPage() {
         </div>
       </div>
 
-      {/* Footer */}
-      <footer className="bg-white py-6">
+      <footer className="bg-white py-6 mt-auto">
         <div className="container mx-auto px-4 text-center">
           <p className="text-gray-700 text-sm font-medium">
             © 2026 พณาไพรสิน (Panaprisin) - ของสะสมและของเก่าโบราณ. All Rights Reserved.
