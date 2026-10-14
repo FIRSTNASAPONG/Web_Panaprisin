@@ -1,0 +1,69 @@
+# syntax=docker/dockerfile:1
+
+# -----------------------------
+# PHP Runtime Base
+# -----------------------------
+FROM php:8.3-fpm-alpine AS php-base
+
+RUN apk add --no-cache \
+        libpq \
+        oniguruma \
+        unzip \
+    && apk add --no-cache --virtual .build-deps \
+        $PHPIZE_DEPS \
+        postgresql-dev \
+        oniguruma-dev \
+    && docker-php-ext-install \
+        pdo_pgsql \
+        bcmath \
+        mbstring \
+        pcntl \
+        opcache \
+    && apk del .build-deps
+
+WORKDIR /var/www/html
+
+# -----------------------------
+# Composer Build
+# -----------------------------
+FROM php-base AS builder
+
+COPY --from=composer:2 /usr/bin/composer \
+    /usr/bin/composer
+
+COPY . .
+
+ENV APP_ENV=production
+
+RUN composer install \
+    --no-dev \
+    --no-interaction \
+    --prefer-dist \
+    --optimize-autoloader \
+    --no-progress
+
+# -----------------------------
+# Production Runtime
+# -----------------------------
+FROM php-base AS runner
+
+COPY --from=builder --chown=www-data:www-data \
+    /var/www/html /var/www/html
+
+RUN mkdir -p \
+      storage/app/public \
+      storage/framework/cache/data \
+      storage/framework/sessions \
+      storage/framework/views \
+      storage/logs \
+      bootstrap/cache \
+    && chown -R www-data:www-data \
+      storage bootstrap/cache \
+    && chmod -R u+rwX,g+rwX \
+      storage bootstrap/cache
+
+USER www-data
+
+EXPOSE 9000
+
+CMD ["php-fpm"]
