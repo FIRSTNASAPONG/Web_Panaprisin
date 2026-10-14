@@ -1,17 +1,20 @@
 "use client";
 
+import type { Order, OrderListResponse } from "@/types/api";
+
 import React, { useState, useEffect, useCallback } from 'react';
 import { useRouter } from 'next/navigation';
+import Link from "next/link";
 
 export default function SellerOrdersPage() {
   const router = useRouter();
-  const [orders, setOrders] = useState<any[]>([]);
+  const [orders, setOrders] = useState<Order[]>([]);
   const [loading, setLoading] = useState(true);
   const [adminName, setAdminName] = useState('ผู้ขาย');
   const [userRole, setUserRole] = useState<string>('');
 
   // สำหรับ Modal ดูรายละเอียดออเดอร์
-  const [selectedOrder, setSelectedOrder] = useState<any | null>(null);
+  const [selectedOrder, setSelectedOrder] = useState<Order | null>(null);
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [statusUpdateLoading, setStatusUpdateLoading] = useState(false);
 
@@ -28,7 +31,7 @@ export default function SellerOrdersPage() {
       });
 
       if (res.ok) {
-        const data = await res.json();
+        const data: OrderListResponse = await res.json();
         // รองรับ Laravel paginate(20) ที่ข้อมูลจะอยู่ใน data.data
         const orderList = Array.isArray(data) ? data : (data.data || []);
         setOrders(orderList);
@@ -61,7 +64,7 @@ export default function SellerOrdersPage() {
   }, [router, fetchOrders]);
 
   // แปลสถานะให้ตรงกับ OrderController (pending, paid, shipped, completed, cancelled)
-  const getStatusDisplay = (status: string) => {
+  const getStatusDisplay = (status: string | undefined) => {
     switch (status?.toLowerCase()) {
       case 'pending':
         return <span className="bg-yellow-100 text-yellow-800 px-3 py-1 rounded-full text-xs font-bold">รอชำระเงิน</span>;
@@ -129,32 +132,32 @@ export default function SellerOrdersPage() {
         <nav className="flex-1 py-4">
           <ul className="space-y-1">
             <li>
-              <a href="/seller" className="flex items-center gap-3 px-6 py-3 text-green-100 hover:bg-white/5 hover:text-white transition">
+              <Link href="/seller" className="flex items-center gap-3 px-6 py-3 text-green-100 hover:bg-white/5 hover:text-white transition">
                 แดชบอร์ด
-              </a>
+              </Link>
             </li>
             <li>
-              <a href="/seller/products" className="flex items-center gap-3 px-6 py-3 text-green-100 hover:bg-white/5 hover:text-white transition">
+              <Link href="/seller/products" className="flex items-center gap-3 px-6 py-3 text-green-100 hover:bg-white/5 hover:text-white transition">
                 จัดการสินค้าทั้งหมด
-              </a>
+              </Link>
             </li>
             <li>
-              <a href="/seller/add-product" className="flex items-center gap-3 px-6 py-3 text-green-100 hover:bg-white/5 hover:text-white transition">
+              <Link href="/seller/add-product" className="flex items-center gap-3 px-6 py-3 text-green-100 hover:bg-white/5 hover:text-white transition">
                 เพิ่มสินค้าใหม่
-              </a>
+              </Link>
             </li>
             <li>
-              <a href="/seller/orders" className="flex items-center gap-3 px-6 py-3 bg-white/10 border-l-4 border-white text-white font-medium">
+              <Link href="/seller/orders" className="flex items-center gap-3 px-6 py-3 bg-white/10 border-l-4 border-white text-white font-medium">
                 จัดการคำสั่งซื้อ
-              </a>
+              </Link>
             </li>
           </ul>
         </nav>
 
         <div className="p-6 border-t border-white/10">
-          <a href="/" className="flex items-center gap-3 text-green-200 hover:text-white transition text-sm">
+          <Link href="/" className="flex items-center gap-3 text-green-200 hover:text-white transition text-sm">
             กลับสู่หน้าร้านค้า
-          </a>
+          </Link>
         </div>
       </aside>
 
@@ -261,7 +264,7 @@ export default function SellerOrdersPage() {
                 <h4 className="font-bold text-gray-900 mb-3 border-b pb-2">รายการสินค้า</h4>
                 <div className="space-y-3">
                   {selectedOrder.items && selectedOrder.items.length > 0 ? (
-                    selectedOrder.items.map((item: any, idx: number) => {
+                    selectedOrder.items.map((item, idx) => {
                       const itemName = item.name || item.product?.name || `รหัสสินค้า #${item.product_id}`;
                       const itemPrice = Number(item.price ?? item.unit_price ?? 0);
                       const itemSubtotal = Number(item.subtotal ?? itemPrice * item.quantity);

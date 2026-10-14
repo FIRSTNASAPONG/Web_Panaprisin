@@ -1,10 +1,13 @@
 "use client";
 
+import Image from "next/image";
+
 import React, { useState, useEffect } from 'react';
 import Navbar from '../../components/Navbar';
 import Footer from '../../components/Footer';
 import { useCart } from '../../context/CartContext';
 import { useRouter } from 'next/navigation';
+import { getProductImageUrl } from "@/lib/image";
 
 export default function CheckoutPage() {
   const { cart, clearCart, fetchCartFromDB } = useCart();
@@ -290,7 +293,7 @@ export default function CheckoutPage() {
                   
                   {slipPreview && (
                     <div className="mb-4 w-48 h-auto border-2 border-gray-200 rounded-md overflow-hidden mx-auto shadow-sm">
-                      <img src={slipPreview} alt="Slip Preview" className="w-full h-full object-cover" />
+                      <Image unoptimized loading="eager" width={96} height={96} src={slipPreview} alt="Slip Preview" className="w-full h-full object-cover" />
                     </div>
                   )}
 
@@ -320,7 +323,7 @@ export default function CheckoutPage() {
                     <div key={item.id} className="flex gap-4">
                       <div className="w-20 h-24 bg-gray-100 text-gray-400 flex items-center justify-center shrink-0 border border-gray-200 rounded-sm">
                         {item.image ? (
-                          <img src={item.image.startsWith('http') ? item.image : `http://localhost:8080/storage/${item.image}`} alt={item.name} className="w-full h-full object-cover rounded-sm" onError={(e) => { e.currentTarget.src = '/image_289eb4.jpg'; }} />
+                          <Image unoptimized loading="eager" width={80} height={96} src={getProductImageUrl(item.image)} alt={item.name} className="w-full h-full object-cover rounded-sm" onError={(e) => { e.currentTarget.src = '/image_289eb4.jpg'; }} />
                         ) : (
                           <span className="text-xs font-bold">ไม่มีรูป</span>
                         )}

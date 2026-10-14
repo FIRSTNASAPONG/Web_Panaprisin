@@ -1,14 +1,17 @@
 "use client";
 
+import type { User } from "@/types/api";
+
 import React, { useState, useEffect } from 'react';
 import { useCart } from '../context/CartContext';
-import { useRouter } from 'next/navigation'; 
+import { useRouter } from 'next/navigation';
+import Link from "next/link";
 
 export default function Navbar() {
   const { cart, clearCart } = useCart(); 
   const router = useRouter();
 
-  const [user, setUser] = useState<any>(null);
+  const [user, setUser] = useState<User | null>(null);
   const [mounted, setMounted] = useState(false);
 
   const totalItems = cart.reduce((total, item) => total + item.quantity, 0);
@@ -28,7 +31,7 @@ export default function Navbar() {
   // 🟢 ยิง POST /api/logout เพื่อ revoke token ตาม P1 Checklist
   const handleLogout = async () => {
     const token = localStorage.getItem('token');
-    const apiUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8080/api';
+    const apiUrl = process.env.NEXT_PUBLIC_API_URL || "/api";
 
     if (token) {
       try {
@@ -59,9 +62,9 @@ export default function Navbar() {
       <div className="bg-[#143a2f] text-white text-sm py-1">
         <div className="container mx-auto px-4 flex justify-between items-center max-w-6xl">
           <div className="flex space-x-4">
-            <a href="/seller" className="hover:text-gray-300">Seller Centre</a>
+            <Link href="/seller" className="hover:text-gray-300">Seller Centre</Link>
             <span className="border-l border-gray-500"></span>
-            <a href="/seller/add-product" className="hover:text-gray-300">เริ่มต้นขายสินค้า</a>
+            <Link href="/seller/add-product" className="hover:text-gray-300">เริ่มต้นขายสินค้า</Link>
             <span className="border-l border-gray-500"></span>
             <div className="flex items-center space-x-2 hidden sm:flex">
               <span>ติดตามเราบน</span>
@@ -86,9 +89,9 @@ export default function Navbar() {
               </>
             ) : (
               <>
-                <a href="/signup" className="hover:text-gray-300 font-bold">สมัครใหม่</a>
+                <Link href="/signup" className="hover:text-gray-300 font-bold">สมัครใหม่</Link>
                 <span className="border-l border-gray-500 h-3"></span>
-                <a href="/login" className="hover:text-gray-300 font-bold">เข้าสู่ระบบ</a>
+                <Link href="/login" className="hover:text-gray-300 font-bold">เข้าสู่ระบบ</Link>
               </>
             )}
           </div>
@@ -98,11 +101,11 @@ export default function Navbar() {
       <header className="bg-[#1B4D3E] text-white pt-6 pb-4 sticky top-0 z-50 shadow-md border-b border-gray-200">
         <div className="container mx-auto px-4 max-w-6xl">
           <div className="flex items-center justify-between gap-8">
-            <a href="/" className="flex-shrink-0 flex items-center gap-3 cursor-pointer hover:opacity-90 transition">
+            <Link href="/" className="flex-shrink-0 flex items-center gap-3 cursor-pointer hover:opacity-90 transition">
               <h1 className="text-3xl font-bold tracking-wider">พณาไพรสิน</h1>
               <span className="border-l-2 border-white/30 h-6 hidden md:block"></span>
               <span className="text-sm font-medium text-green-200 hidden md:block">ของสะสม & ของเก่าโบราณ</span>
-            </a>
+            </Link>
 
             <div className="flex-grow max-w-xl">
               <div className="flex bg-white rounded-sm overflow-hidden p-1">
@@ -113,14 +116,14 @@ export default function Navbar() {
               </div>
             </div>
 
-            <a href="/cart" className="flex-shrink-0 mr-4 cursor-pointer hover:opacity-80 transition relative block">
+            <Link href="/cart" className="flex-shrink-0 mr-4 cursor-pointer hover:opacity-80 transition relative block">
               <svg xmlns="http://www.w3.org/2000/svg" width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="8" cy="21" r="1"/><circle cx="19" cy="21" r="1"/><path d="M2.05 2.05h2l2.66 12.42a2 2 0 0 0 2 1.58h9.78a2 2 0 0 0 1.95-1.57l1.65-7.43H5.12"/></svg>
               {totalItems > 0 && (
                 <span className="absolute -top-2 -right-2 bg-red-500 text-white text-xs font-bold w-5 h-5 flex items-center justify-center rounded-full border-2 border-[#1B4D3E]">
                   {totalItems > 99 ? '99+' : totalItems}
                 </span>
               )}
-            </a>
+            </Link>
           </div>
         </div>
       </header>

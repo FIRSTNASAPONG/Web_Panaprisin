@@ -1,13 +1,17 @@
 "use client";
 
+import Image from "next/image";
+
 import React from 'react';
 import Navbar from '../../components/Navbar';
 import Footer from '../../components/Footer';
 import { useCart } from '../../context/CartContext';
 import { useRouter } from 'next/navigation'; // 🟢 จุดที่ 1: ดึงระบบ Router มาใช้พาเปลี่ยนหน้า
+import { getProductImageUrl } from "@/lib/image";
+import Link from "next/link";
 
 export default function CartPage() {
-  const { cart, removeFromCart, clearCart, updateQuantity } = useCart();
+  const { cart, removeFromCart, updateQuantity } = useCart();
   const router = useRouter(); // 🟢 จุดที่ 2: เรียกใช้งาน Router
 
   // คำนวณราคารวมทั้งหมดในตะกร้า
@@ -28,9 +32,9 @@ export default function CartPage() {
           <div className="bg-white rounded-sm shadow-sm p-12 flex flex-col items-center justify-center text-gray-500">
             <svg xmlns="http://www.w3.org/2000/svg" width="64" height="64" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1" strokeLinecap="round" strokeLinejoin="round" className="mb-4 text-gray-300"><circle cx="8" cy="21" r="1"/><circle cx="19" cy="21" r="1"/><path d="M2.05 2.05h2l2.66 12.42a2 2 0 0 0 2 1.58h9.78a2 2 0 0 0 1.95-1.57l1.65-7.43H5.12"/></svg>
             <p className="text-lg font-medium text-gray-700 mb-4">ตะกร้าของคุณยังว่างเปล่า</p>
-            <a href="/" className="bg-[#1B4D3E] text-white px-8 py-2 rounded-sm font-medium hover:bg-[#143a2f] transition">
+            <Link href="/" className="bg-[#1B4D3E] text-white px-8 py-2 rounded-sm font-medium hover:bg-[#143a2f] transition">
               ไปเลือกซื้อสินค้าเลย
-            </a>
+            </Link>
           </div>
         ) : (
           /* กรณีมีของในตะกร้า */
@@ -51,8 +55,8 @@ export default function CartPage() {
                     <div key={item.id} className="grid grid-cols-1 md:grid-cols-12 gap-4 p-4 items-center">
                       <div className="col-span-1 md:col-span-6 flex gap-4">
                         <div className="w-20 h-20 bg-gray-100 shrink-0 border border-gray-200">
-                          <img 
-                            src={item.image ? `http://localhost:8080/storage/${item.image}` : "/image_289eb4.jpg"} 
+                          <Image unoptimized loading="eager" width={80} height={80}
+                            src={getProductImageUrl(item.image)}
                             alt={item.name} 
                             className="w-full h-full object-cover" 
                             onError={(e) => { e.currentTarget.src = '/image_289eb4.jpg' }}

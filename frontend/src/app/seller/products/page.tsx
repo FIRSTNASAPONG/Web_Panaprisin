@@ -1,16 +1,22 @@
 "use client";
 
+import Image from "next/image";
+
+import type { Product, ProductListResponse, User } from "@/types/api";
+
 import React, { useState, useEffect, useCallback } from 'react';
 import { useRouter } from 'next/navigation';
+import { getProductImageUrl } from "@/lib/image";
+import Link from "next/link";
 
 export default function SellerProductsPage() {
   const router = useRouter();
-  const [products, setProducts] = useState<any[]>([]);
+  const [products, setProducts] = useState<Product[]>([]);
   const [loading, setLoading] = useState(true);
   const [adminName, setAdminName] = useState('ผู้ขาย');
   const [deleteLoading, setDeleteLoading] = useState<number | null>(null);
 
-  const fetchProducts = useCallback(async (currentUser: any) => {
+  const fetchProducts = useCallback(async (currentUser: User) => {
     setLoading(true);
     try {
       const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/products`, {
@@ -23,12 +29,12 @@ export default function SellerProductsPage() {
       });
       
       if (res.ok) {
-        const data = await res.json();
+        const data: ProductListResponse = await res.json();
         const allProducts = Array.isArray(data) ? data : (data.data || data.products || []);
         // 🟢 แสดงเฉพาะสินค้าของ Seller ที่ล็อกอินอยู่ (Admin เห็นทั้งหมด)
         const myProducts = currentUser.role === 'admin'
           ? allProducts
-          : allProducts.filter((p: any) => Number(p.user_id) === Number(currentUser.id));
+          : allProducts.filter((p) => Number(p.user_id) === Number(currentUser.id));
         setProducts(myProducts);
       } else {
         setProducts([]);
@@ -104,32 +110,32 @@ export default function SellerProductsPage() {
         <nav className="flex-1 py-4">
           <ul className="space-y-1">
             <li>
-              <a href="/seller" className="flex items-center gap-3 px-6 py-3 text-green-100 hover:bg-white/5 hover:text-white transition">
+              <Link href="/seller" className="flex items-center gap-3 px-6 py-3 text-green-100 hover:bg-white/5 hover:text-white transition">
                 แดชบอร์ด
-              </a>
+              </Link>
             </li>
             <li>
-              <a href="/seller/products" className="flex items-center gap-3 px-6 py-3 bg-white/10 border-l-4 border-white text-white font-medium">
+              <Link href="/seller/products" className="flex items-center gap-3 px-6 py-3 bg-white/10 border-l-4 border-white text-white font-medium">
                 จัดการสินค้าทั้งหมด
-              </a>
+              </Link>
             </li>
             <li>
-              <a href="/seller/add-product" className="flex items-center gap-3 px-6 py-3 text-green-100 hover:bg-white/5 hover:text-white transition">
+              <Link href="/seller/add-product" className="flex items-center gap-3 px-6 py-3 text-green-100 hover:bg-white/5 hover:text-white transition">
                 เพิ่มสินค้าใหม่
-              </a>
+              </Link>
             </li>
             <li>
-              <a href="/seller/orders" className="flex items-center gap-3 px-6 py-3 text-green-100 hover:bg-white/5 hover:text-white transition">
+              <Link href="/seller/orders" className="flex items-center gap-3 px-6 py-3 text-green-100 hover:bg-white/5 hover:text-white transition">
                 จัดการคำสั่งซื้อ
-              </a>
+              </Link>
             </li>
           </ul>
         </nav>
         
         <div className="p-6 border-t border-white/10">
-          <a href="/" className="flex items-center gap-3 text-green-200 hover:text-white transition text-sm">
+          <Link href="/" className="flex items-center gap-3 text-green-200 hover:text-white transition text-sm">
             กลับสู่หน้าร้านค้า
-          </a>
+          </Link>
         </div>
       </aside>
 
@@ -186,8 +192,8 @@ export default function SellerProductsPage() {
                           <td className="px-6 py-3">
                             <div className="w-14 h-14 bg-gray-100 rounded-sm border border-gray-200 overflow-hidden flex items-center justify-center">
                               {product.image_url ? (
-                                <img 
-                                  src={`http://localhost:8080/storage/${product.image_url}`} 
+                                <Image unoptimized loading="eager" width={56} height={56}
+                                  src={getProductImageUrl(product.image_url || product.image)}
                                   alt={product.name} 
                                   className="w-full h-full object-cover"
                                   onError={(e) => { e.currentTarget.src = '/image_289eb4.jpg' }}

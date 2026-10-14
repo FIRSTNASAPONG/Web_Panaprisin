@@ -1,9 +1,16 @@
 "use client";
 
+import Link from "next/link";
+
+import Image from "next/image";
+
+import type { Product, ProductListResponse } from "@/types/api";
+
 import React, { useState, useEffect } from 'react';
 import Navbar from '../components/Navbar';
 import Footer from '../components/Footer';
 import { useCart } from '../context/CartContext';
+import { getProductImageUrl } from "@/lib/image";
 
 const MOCK_CATEGORIES = [
   { id: 1, name: 'พระเครื่อง', icon: <svg xmlns="http://www.w3.org/2000/svg" width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="text-[#1B4D3E]"><path d="M6 3h12l4 6-10 13L2 9Z"/><path d="M11 3 8 9l4 13 4-13-3-6"/><path d="M2 9h20"/></svg> },
@@ -13,7 +20,7 @@ const MOCK_CATEGORIES = [
 ];
 
 export default function App() {
-  const [products, setProducts] = useState<any[]>([]);
+  const [products, setProducts] = useState<Product[]>([]);
   const [loading, setLoading] = useState(true);
   const { addToCart } = useCart();
 
@@ -28,7 +35,7 @@ export default function App() {
     })
       .then(async (res) => {
         if (!res.ok) throw new Error('Failed to fetch');
-        const data = await res.json();
+        const data: ProductListResponse = await res.json();
         if (Array.isArray(data)) setProducts(data);
         else if (data && Array.isArray(data.data)) setProducts(data.data);
         else if (data && Array.isArray(data.products)) setProducts(data.products);
@@ -104,11 +111,11 @@ export default function App() {
               const isOutOfStock = stockCount <= 0;
 
               return (
-                <a href={`/product/${product.id}`} key={product.id} className="block relative group">
+                <Link href={`/product/${product.id}`} key={product.id} className="block relative group">
                   <div className="bg-white hover:border-[#1B4D3E] border border-transparent hover:shadow-md transition cursor-pointer flex flex-col h-full">
                     <div className="relative pt-[100%]">
-                      <img 
-                        src={product.image_url ? `http://localhost:8080/storage/${product.image_url}` : "/image_289eb4.jpg"} 
+                      <Image unoptimized loading="eager" width={400} height={400}
+                        src={getProductImageUrl(product.image_url || product.image)}
                         alt={product.name} 
                         className="absolute top-0 left-0 w-full h-full object-cover" 
                         onError={(e) => { e.currentTarget.src = '/image_289eb4.jpg' }}
@@ -152,7 +159,7 @@ export default function App() {
                       </div>
                     </div>
                   </div>
-                </a>
+                </Link>
               );
             })}
           </div>

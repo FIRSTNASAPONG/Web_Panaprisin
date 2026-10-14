@@ -1,7 +1,10 @@
 "use client";
 
+import type { Order, OrderListResponse, Product, ProductListResponse, User } from "@/types/api";
+
 import React, { useEffect, useState, useCallback } from 'react';
 import { useRouter } from 'next/navigation';
+import Link from "next/link";
 
 export default function SellerCentrePage() {
   const router = useRouter();
@@ -15,9 +18,9 @@ export default function SellerCentrePage() {
     outOfStockProducts: 0
   });
 
-  const [recentOrders, setRecentOrders] = useState<any[]>([]);
+  const [recentOrders, setRecentOrders] = useState<Order[]>([]);
 
-  const fetchDashboardData = useCallback(async (token: string, currentUser: any) => {
+  const fetchDashboardData = useCallback(async (token: string, currentUser: User) => {
     setLoading(true);
     try {
       const headers = {
@@ -30,32 +33,32 @@ export default function SellerCentrePage() {
         fetch(`${process.env.NEXT_PUBLIC_API_URL}/orders`, { headers, cache: 'no-store' })
       ]);
 
-      let myProducts: any[] = [];
-      let myOrders: any[] = [];
+      let myProducts: Product[] = [];
+      let myOrders: Order[] = [];
 
       if (productsRes.ok) {
-        const productsData = await productsRes.json();
+        const productsData: ProductListResponse = await productsRes.json();
         const allProducts = Array.isArray(productsData) ? productsData : (productsData.data || []);
         // 🟢 กรองเฉพาะสินค้าของ Seller ที่ล็อกอินอยู่ (ถ้าเป็น admin เห็นทั้งหมด)
         myProducts = currentUser.role === 'admin'
           ? allProducts
-          : allProducts.filter((p: any) => Number(p.user_id) === Number(currentUser.id));
+          : allProducts.filter((p) => Number(p.user_id) === Number(currentUser.id));
       }
 
       if (ordersRes.ok) {
-        const ordersData = await ordersRes.json();
+        const ordersData: OrderListResponse = await ordersRes.json();
         // OrderController@index กรองเฉพาะออเดอร์ที่มีสินค้าของ Seller คนนี้มาให้แล้วใน .data
         myOrders = Array.isArray(ordersData) ? ordersData : (ordersData.data || []);
       }
 
       const totalProds = myProducts.length;
-      const outOfStock = myProducts.filter((p: any) => Number(p.stock_quantity ?? p.stock ?? 0) <= 0).length;
-      const pendingOrds = myOrders.filter((o: any) => (o.status || o.order_status) === 'pending').length;
+      const outOfStock = myProducts.filter((p) => Number(p.stock_quantity ?? p.stock ?? 0) <= 0).length;
+      const pendingOrds = myOrders.filter((o) => (o.status || o.order_status) === 'pending').length;
       
       const todayStr = new Date().toISOString().split('T')[0];
       const todaySalesAmount = myOrders
-        .filter((o: any) => o.created_at && String(o.created_at).startsWith(todayStr) && (o.status || o.order_status) !== 'cancelled')
-        .reduce((sum: number, o: any) => sum + Number(o.total_amount || 0), 0);
+        .filter((o) => o.created_at && String(o.created_at).startsWith(todayStr) && (o.status || o.order_status) !== 'cancelled')
+        .reduce((sum, o) => sum + Number(o.total_amount || 0), 0);
 
       setStats({
         todaySales: todaySalesAmount,
@@ -105,32 +108,32 @@ export default function SellerCentrePage() {
         <nav className="flex-1 py-4">
           <ul className="space-y-1">
             <li>
-              <a href="/seller" className="flex items-center gap-3 px-6 py-3 bg-white/10 border-l-4 border-white text-white font-medium">
+              <Link href="/seller" className="flex items-center gap-3 px-6 py-3 bg-white/10 border-l-4 border-white text-white font-medium">
                 แดชบอร์ด
-              </a>
+              </Link>
             </li>
             <li>
-              <a href="/seller/products" className="flex items-center gap-3 px-6 py-3 text-green-100 hover:bg-white/5 hover:text-white transition">
+              <Link href="/seller/products" className="flex items-center gap-3 px-6 py-3 text-green-100 hover:bg-white/5 hover:text-white transition">
                 จัดการสินค้าทั้งหมด
-              </a>
+              </Link>
             </li>
             <li>
-              <a href="/seller/add-product" className="flex items-center gap-3 px-6 py-3 text-green-100 hover:bg-white/5 hover:text-white transition">
+              <Link href="/seller/add-product" className="flex items-center gap-3 px-6 py-3 text-green-100 hover:bg-white/5 hover:text-white transition">
                 เพิ่มสินค้าใหม่
-              </a>
+              </Link>
             </li>
             <li>
-              <a href="/seller/orders" className="flex items-center gap-3 px-6 py-3 text-green-100 hover:bg-white/5 hover:text-white transition">
+              <Link href="/seller/orders" className="flex items-center gap-3 px-6 py-3 text-green-100 hover:bg-white/5 hover:text-white transition">
                 จัดการคำสั่งซื้อ
-              </a>
+              </Link>
             </li>
           </ul>
         </nav>
 
         <div className="p-6 border-t border-white/10">
-          <a href="/" className="flex items-center gap-3 text-green-200 hover:text-white transition text-sm">
+          <Link href="/" className="flex items-center gap-3 text-green-200 hover:text-white transition text-sm">
             กลับสู่หน้าร้านค้า
-          </a>
+          </Link>
         </div>
       </aside>
 

@@ -1,9 +1,15 @@
 "use client";
 
+import Image from "next/image";
+
+import { isAxiosError } from "axios";
+import type { ApiError } from "@/types/api";
+
 import React, { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import api from '@/lib/axios';
 import { useCart } from '../../context/CartContext'; // 🟢 ดึง CartContext มาซิงค์ตอน Login
+import Link from "next/link";
 
 export default function LoginPage() {
   const [email, setEmail] = useState('');
@@ -36,9 +42,10 @@ export default function LoginPage() {
         router.push('/');
       }
       
-    } catch (error: any) {
+    } catch (error: unknown) {
+      const errorData = isAxiosError<ApiError>(error) ? error.response?.data : undefined;
       console.error('Login error:', error);
-      const backendMessage = error.response?.data?.message || 'อีเมลหรือรหัสผ่านไม่ถูกต้อง กรุณาลองใหม่อีกครั้ง';
+      const backendMessage = errorData?.message || 'อีเมลหรือรหัสผ่านไม่ถูกต้อง กรุณาลองใหม่อีกครั้ง';
       setErrorMessage(backendMessage);
     } finally {
       setIsLoading(false);
@@ -50,7 +57,7 @@ export default function LoginPage() {
       <header className="bg-white py-5 shadow-sm">
         <div className="container mx-auto px-4 max-w-5xl flex justify-between items-center">
           <div className="flex items-center gap-4">
-            <a href="/" className="text-3xl font-bold text-[#1B4D3E] tracking-wider hover:opacity-90">พณาไพรสิน</a>
+            <Link href="/" className="text-3xl font-bold text-[#1B4D3E] tracking-wider hover:opacity-90">พณาไพรสิน</Link>
             <span className="text-2xl text-gray-800 font-medium md:text-2xl">เข้าสู่ระบบ</span>
           </div>
         </div>
@@ -60,7 +67,7 @@ export default function LoginPage() {
         <div className="container mx-auto px-4 max-w-5xl flex justify-center md:justify-between items-center gap-8">
           
           <div className="hidden md:block w-3/5 h-[480px]">
-            <img 
+            <Image unoptimized loading="eager" width={600} height={800}
               src="/image_289eb4.jpg" 
               alt="ของเก่าโบราณ พณาไพรสิน" 
               className="w-full h-full object-cover rounded-md shadow-2xl border-4 border-white/10"
@@ -117,7 +124,7 @@ export default function LoginPage() {
             </form>
 
             <div className="mt-8 text-center text-sm text-gray-600 font-medium">
-              เพิ่งเคยเข้ามาใน พณาไพรสิน ใช่หรือไม่? <a href="/signup" className="text-[#1B4D3E] font-bold hover:underline ml-1">สมัครใหม่</a>
+              เพิ่งเคยเข้ามาใน พณาไพรสิน ใช่หรือไม่? <Link href="/signup" className="text-[#1B4D3E] font-bold hover:underline ml-1">สมัครใหม่</Link>
             </div>
           </div>
         </div>

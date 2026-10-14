@@ -1,5 +1,9 @@
 "use client";
 
+import Link from "next/link";
+
+import Image from "next/image";
+
 import React, { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 
@@ -136,20 +140,20 @@ export default function AddProductPage() {
         <nav className="flex-1 py-4">
           <ul className="space-y-1">
             <li>
-              <a
+              <Link
                 href="/seller"
                 className="flex items-center gap-3 px-6 py-3 text-green-100 hover:bg-white/5 hover:text-white transition"
               >
                 แดชบอร์ด
-              </a>
+              </Link>
             </li>
             <li>
-              <a
+              <Link
                 href="/seller/add-product"
                 className="flex items-center gap-3 px-6 py-3 bg-white/10 border-l-4 border-white text-white font-medium"
               >
                 เพิ่มสินค้าใหม่
-              </a>
+              </Link>
             </li>
           </ul>
         </nav>
@@ -226,7 +230,7 @@ export default function AddProductPage() {
               <div className="flex items-center gap-6">
                 <div className="w-32 h-32 bg-gray-100 border border-gray-300 rounded-md flex items-center justify-center overflow-hidden shrink-0">
                   {imagePreview ? (
-                    <img
+                    <Image unoptimized loading="eager" width={400} height={400}
                       src={imagePreview}
                       alt="Preview"
                       className="w-full h-full object-cover"

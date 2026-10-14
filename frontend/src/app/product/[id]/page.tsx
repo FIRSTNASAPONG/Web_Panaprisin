@@ -1,17 +1,23 @@
 "use client";
 
+import Image from "next/image";
+
+import type { Product } from "@/types/api";
+
 import React, { useState, useEffect } from 'react';
 import { useParams, useRouter } from 'next/navigation';
 import { useCart } from '../../../context/CartContext';
 import Navbar from '../../../components/Navbar';
 import Footer from '../../../components/Footer';
+import { getProductImageUrl } from "@/lib/image";
+import Link from "next/link";
 
 export default function ProductDetailPage() {
   const params = useParams();
   const router = useRouter();
   const productId = Number(params?.id);
 
-  const [product, setProduct] = useState<any>(null);
+  const [product, setProduct] = useState<Product | null>(null);
   const [loading, setLoading] = useState(true);
   const [quantity, setQuantity] = useState(1);
   const [isAdding, setIsAdding] = useState(false);
@@ -19,7 +25,7 @@ export default function ProductDetailPage() {
 
   useEffect(() => {
     if (productId) {
-      const apiUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8080/api';
+      const apiUrl = process.env.NEXT_PUBLIC_API_URL || "/api";
 
       fetch(`${apiUrl}/products/${productId}`, {
         headers: { 'Accept': 'application/json' },
@@ -119,7 +125,7 @@ export default function ProductDetailPage() {
       {/* Breadcrumb */}
       <div className="container mx-auto px-4 max-w-6xl py-4">
         <div className="flex items-center text-sm text-gray-600 gap-2">
-          <a href="/" className="text-[#1B4D3E] hover:underline">พณาไพรสิน</a>
+          <Link href="/" className="text-[#1B4D3E] hover:underline">พณาไพรสิน</Link>
           <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="m9 18 6-6-6-6"/></svg>
           <span className="text-gray-500 truncate">{product.name}</span>
         </div>
@@ -133,8 +139,8 @@ export default function ProductDetailPage() {
             {/* Left: Images */}
             <div className="w-full md:w-2/5 shrink-0">
               <div className="aspect-square w-full bg-gray-100 mb-4 border border-gray-200 relative">
-                <img 
-                  src={product.image_url ? `http://localhost:8080/storage/${product.image_url}` : "/image_289eb4.jpg"} 
+                <Image unoptimized loading="eager" width={600} height={600}
+                  src={getProductImageUrl(product.image_url || product.image)}
                   alt={product.name} 
                   className="w-full h-full object-cover" 
                   onError={(e) => { e.currentTarget.src = '/image_289eb4.jpg' }}
@@ -238,15 +244,15 @@ export default function ProductDetailPage() {
         <div className="bg-white rounded-sm shadow-sm p-6 mb-4 flex items-center justify-between border-l-4 border-[#1B4D3E]">
           <div className="flex items-center gap-4">
             <div className="w-16 h-16 bg-gray-200 rounded-full overflow-hidden border border-gray-200">
-               <img src="/image_289eb4.jpg" alt="พณาไพรสิน" className="w-full h-full object-cover" />
+              <Image unoptimized loading="eager" width={64} height={64} src="/image_289eb4.jpg" alt="พณาไพรสิน" className="w-full h-full object-cover" />
             </div>
             <div>
               <h3 className="font-medium text-gray-900 text-lg">พณาไพรสิน</h3>
               <p className="text-sm text-gray-500 mb-1">Active เมื่อ 5 นาทีที่ผ่านมา</p>
               <div className="flex gap-2">
-                <a href="/" className="flex items-center gap-1 border border-gray-300 text-gray-600 px-3 py-1 text-xs rounded-sm hover:bg-gray-50 transition">
+                <Link href="/" className="flex items-center gap-1 border border-gray-300 text-gray-600 px-3 py-1 text-xs rounded-sm hover:bg-gray-50 transition">
                   ดูร้านค้า
-                </a>
+                </Link>
               </div>
             </div>
           </div>

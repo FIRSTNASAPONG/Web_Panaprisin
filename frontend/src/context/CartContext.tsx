@@ -1,5 +1,7 @@
 "use client";
 
+import type { ApiCart } from "@/types/api";
+
 import React, { createContext, useContext, useState, ReactNode, useEffect, useCallback } from 'react';
 
 export interface CartItem {
@@ -25,8 +27,7 @@ const CartContext = createContext<CartContextType | undefined>(undefined);
 export function CartProvider({ children }: { children: ReactNode }) {
   const [cart, setCart] = useState<CartItem[]>([]);
   const [isLoaded, setIsLoaded] = useState(false);
-
-  const apiUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8080/api';
+  const apiUrl = process.env.NEXT_PUBLIC_API_URL || "/api";
 
   // 🟢 1. ฟังก์ชันดึงตะกร้าจาก Database (GET /api/cart)
   const fetchCartFromDB = useCallback(async () => {
@@ -57,10 +58,10 @@ export function CartProvider({ children }: { children: ReactNode }) {
       });
 
       if (res.ok) {
-        const data = await res.json();
+        const data: ApiCart = await res.json();
         // แปลงข้อมูลจาก $cart->load('items.product') ของ Laravel ให้เข้ากับหน้าบ้าน
         const items = Array.isArray(data.items) ? data.items : [];
-        const mappedCart: CartItem[] = items.map((item: any) => ({
+        const mappedCart: CartItem[] = items.map((item) => ({
           id: Number(item.product_id),
           cart_item_id: Number(item.id), // ID ของแถวในตาราง cart_items
           name: item.product?.name || 'ไม่มีชื่อสินค้า',

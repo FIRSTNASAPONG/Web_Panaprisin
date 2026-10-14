@@ -1,8 +1,14 @@
 "use client";
 
+import Image from "next/image";
+
+import { isAxiosError } from "axios";
+import type { ApiError } from "@/types/api";
+
 import React, { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import api from '@/lib/axios';
+import Link from "next/link";
 
 export default function SignupPage() {
   const router = useRouter();
@@ -58,17 +64,18 @@ export default function SignupPage() {
         alert('สมัครสมาชิกสำเร็จ! กรุณาเข้าสู่ระบบ');
         router.push('/login');
       }
-    } catch (error: any) {
+    } catch (error: unknown) {
+      const errorData = isAxiosError<ApiError>(error) ? error.response?.data : undefined;
       // ใช้ console.warn แทน console.error เพื่อไม่ให้ Next.js 15 เด้งป๊อปอัปดำทับหน้าจอ
-      console.warn('Signup validation error:', error.response?.data);
+      console.warn('Signup validation error:', errorData);
 
-      const errors = error.response?.data?.errors;
+      const errors = errorData?.errors;
       if (errors) {
         const firstError = Object.values(errors).flat().join('\n');
         setErrorMessage(firstError);
       } else {
         setErrorMessage(
-          error.response?.data?.message || 'เกิดข้อผิดพลาดในการสมัครสมาชิก กรุณาตรวจสอบข้อมูลอีกครั้ง'
+          errorData?.message || 'เกิดข้อผิดพลาดในการสมัครสมาชิก กรุณาตรวจสอบข้อมูลอีกครั้ง'
         );
       }
     } finally {
@@ -81,9 +88,9 @@ export default function SignupPage() {
       <header className="bg-white py-5 shadow-sm">
         <div className="container mx-auto px-4 max-w-5xl flex justify-between items-center">
           <div className="flex items-center gap-4">
-            <a href="/" className="text-3xl font-bold text-[#1B4D3E] tracking-wider hover:opacity-90">
+            <Link href="/" className="text-3xl font-bold text-[#1B4D3E] tracking-wider hover:opacity-90">
               พณาไพรสิน
-            </a>
+            </Link>
             <span className="text-2xl text-gray-800 font-medium">สมัครใหม่</span>
           </div>
         </div>
@@ -92,7 +99,7 @@ export default function SignupPage() {
       <div className="bg-[#1B4D3E] flex-grow flex items-center py-10">
         <div className="container mx-auto px-4 max-w-5xl flex justify-center md:justify-between items-center gap-8">
           <div className="hidden md:block w-3/5 h-[480px]">
-            <img
+            <Image unoptimized loading="eager" width={600} height={800}
               src="/image_289eb4.jpg"
               alt="พณาไพรสิน"
               className="w-full h-full object-cover rounded-md shadow-2xl border-4 border-white/10"
@@ -204,9 +211,9 @@ export default function SignupPage() {
 
             <div className="mt-4 text-center text-sm text-gray-600 font-medium">
               หากมีบัญชีผู้ใช้แล้ว คุณสามารถ{' '}
-              <a href="/login" className="text-[#1B4D3E] font-bold hover:underline">
+              <Link href="/login" className="text-[#1B4D3E] font-bold hover:underline">
                 เข้าสู่ระบบ
-              </a>
+              </Link>
             </div>
           </div>
         </div>
