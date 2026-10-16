@@ -1,0 +1,143 @@
+name: Auto Release and Deploy Production
+
+# Existing publish-images.yml only runs for application changes.
+# This workflow starts AFTER that run has finished, not on every push.
+on:
+  workflow_run:
+    workflows:
+      - Build and Publish Production Images
+    types:
+      - completed
+
+permissions:
+  actions: read
+  contents: write
+
+concurrency:
+  group: panaprisin-auto-release-production
+  cancel-in-progress: false
+
+jobs:
+  release-and-deploy:
+    name: Verify CI, release, and deploy
+    if: >-
+      github.event.workflow_run.event == 'push' &&
+      github.event.workflow_run.head_branch == 'main' &&
+      github.event.workflow_run.conclusion == 'success'
+    runs-on: ubuntu-latest
+    timeout-minutes: 35
+    steps:
+      - name: Verify main SHA, publish jobs, and CI
+        id: verify
+        env:
+          GH_TOKEN: ${{ github.token }}
+          EXPECTED_SHA: ${{ github.event.workflow_run.head_sha }}
+          PUBLISH_RUN_ID: ${{ github.event.workflow_run.id }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          [[ "$EXPECTED_SHA" =~ ^[0-9a-f]{40}$ ]]
+
+          # Reject older successful builds if a newer commit already reached main.
+          MAIN_SHA="$(gh api "repos/${GITHUB_REPOSITORY}/git/ref/heads/main" --jq '.object.sha')"
+          if [[ "$MAIN_SHA" != "$EXPECTED_SHA" ]]; then
+            echo "SKIP: main moved from ${EXPECTED_SHA} to ${MAIN_SHA}"
+            echo 'eligible=false' >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
+
+          # A successful workflow conclusion alone isn't enough if the matrix was modified.
+          jobs="$(gh api --paginate "repos/${GITHUB_REPOSITORY}/actions/runs/${PUBLISH_RUN_ID}/jobs?per_page=100" --jq '.jobs[] | [.name, .conclusion] | @tsv')"
+          echo "$jobs"
+          grep -Eq '^Publish frontend[[:space:]]+success$' <<< "$jobs" || { echo 'Missing successful frontend image job'; exit 1; }
+          grep -Eq '^Publish backend[[:space:]]+success$' <<< "$jobs" || { echo 'Missing successful backend image job'; exit 1; }
+
+          # ci.yml and publish-images.yml run concurrently; wait for CI's push run.
+          ci_ok=false
+          for i in $(seq 1 60); do
+            data="$(gh api "repos/${GITHUB_REPOSITORY}/actions/workflows/ci.yml/runs?event=push&branch=main&per_page=100")"
+            status="$(jq -r --arg sha "$EXPECTED_SHA" '[.workflow_runs[] | select(.head_sha == $sha)] | sort_by(.run_attempt) | last | [.status,.conclusion] | @tsv' <<< "$data")"
+            if [[ "$status" == $'completed\tsuccess' ]]; then
+              ci_ok=true
+              break
+            fi
+            if [[ "$status" == $'completed\tfailure' || "$status" == $'completed\tcancelled' || "$status" == $'completed\ttimed_out' || "$status" == $'completed\taction_required' ]]; then
+              echo "CI did not pass: $status"
+              exit 1
+            fi
+            echo "Waiting for CI run on ${EXPECTED_SHA} (attempt $i/60; status: ${status:-not found})"
+            sleep 20
+          done
+          [[ "$ci_ok" == true ]] || { echo 'Timed out waiting for CI'; exit 1; }
+
+          # main might advance while waiting for CI.
+          MAIN_SHA="$(gh api "repos/${GITHUB_REPOSITORY}/git/ref/heads/main" --jq '.object.sha')"
+          if [[ "$MAIN_SHA" != "$EXPECTED_SHA" ]]; then
+            echo "SKIP: main advanced while waiting for CI"
+            echo 'eligible=false' >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
+          echo 'eligible=true' >> "$GITHUB_OUTPUT"
+          echo "sha=$EXPECTED_SHA" >> "$GITHUB_OUTPUT"
+
+      - name: Create approved tag and release
+        if: steps.verify.outputs.eligible == 'true'
+        id: release
+        env:
+          GH_TOKEN: ${{ github.token }}
+          SHA: ${{ steps.verify.outputs.sha }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          date_utc="$(date -u +%Y-%m-%d)"
+          # The existing Azure verifier accepts deploy-YYYY-MM-DD-NN (two digits).
+          releases="$(gh api --paginate "repos/${GITHUB_REPOSITORY}/releases?per_page=100" --jq '.[].tag_name')"
+          highest="$(awk -v prefix="deploy-${date_utc}-" 'index($0,prefix)==1 { n=substr($0,length(prefix)+1); if (n ~ /^[0-9][0-9]$/ && n+0>max) max=n+0 } END { print max+0 }' <<< "$releases")"
+          for n in $(seq "$((highest+1))" 99); do
+            tag="$(printf 'deploy-%s-%02d' "$date_utc" "$n")"
+            # Ref lookup: 404 is expected for an unused tag. Handle other errors.
+            status="$(gh api -i "repos/${GITHUB_REPOSITORY}/git/ref/tags/${tag}" 2>/dev/null | head -1 || true)"
+            if [[ "$status" == *'200 '* ]]; then continue; fi
+            [[ -z "$status" || "$status" == *'404 '* ]] || { echo "Tag check failed: $status"; exit 1; }
+            gh api -X POST "repos/${GITHUB_REPOSITORY}/git/refs" -f ref="refs/tags/${tag}" -f sha="$SHA" >/dev/null
+            echo "Created lightweight tag: $tag -> $SHA"
+            gh api -X POST "repos/${GITHUB_REPOSITORY}/releases" \
+              -f tag_name="$tag" \
+              -f target_commitish="$SHA" \
+              -f name="Panaprisin Production ${tag}" \
+              -f body="Automated production release for commit ${SHA}. CI and frontend/backend image publishing succeeded." \
+              -F draft=false -F prerelease=false >/dev/null
+            echo "tag=$tag" >> "$GITHUB_OUTPUT"
+            echo "Release published: $tag"
+            exit 0
+          done
+          echo "No available two-digit tag for ${date_utc}; adjust verifier and tag policy."
+          exit 1
+
+      - name: Configure SSH
+        if: steps.release.outputs.tag != ''
+        env:
+          SSH_PRIVATE_KEY: ${{ secrets.CD_SSH_KEY }}
+          SSH_KNOWN_HOSTS: ${{ secrets.CD_KNOWN_HOSTS }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          umask 077
+          mkdir -p ~/.ssh
+          test -n "$SSH_PRIVATE_KEY" && test -n "$SSH_KNOWN_HOSTS"
+          printf '%s\n' "$SSH_PRIVATE_KEY" > ~/.ssh/id_ed25519
+          printf '%s\n' "$SSH_KNOWN_HOSTS" > ~/.ssh/known_hosts
+          ssh-keygen -y -f ~/.ssh/id_ed25519 >/dev/null
+
+      - name: Deploy via restricted SSH key
+        if: steps.release.outputs.tag != ''
+        shell: bash
+        run: |
+          set -euo pipefail
+          ssh -i ~/.ssh/id_ed25519 \
+            -o BatchMode=yes \
+            -o StrictHostKeyChecking=yes \
+            -o ConnectTimeout=15 \
+            -o ServerAliveInterval=30 \
+            -o ServerAliveCountMax=3 \
+            azureuser@70.153.139.129 deploy
