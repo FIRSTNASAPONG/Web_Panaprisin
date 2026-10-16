@@ -7,6 +7,11 @@ import Image from "next/image";
 import React, { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 
+type Category = {
+  id: number;
+  name: string;
+};
+
 export default function AddProductPage() {
   const router = useRouter();
 
@@ -17,6 +22,9 @@ export default function AddProductPage() {
   const [price, setPrice] = useState("");
   const [stock, setStock] = useState("1");
   const [loading, setLoading] = useState(false);
+  const [categories, setCategories] = useState<Category[]>([]);
+  const [categoriesLoading, setCategoriesLoading] = useState(true);
+  const [categoriesError, setCategoriesError] = useState(false);
 
   // State สำหรับจัดการรูปภาพ
   const [imageFile, setImageFile] = useState<File | null>(null);
@@ -44,6 +52,57 @@ export default function AddProductPage() {
     }
   }, [router]);
 
+  // โหลดหมวดหมู่จาก Laravel API แทนการกำหนด category_id ตายตัว
+  useEffect(() => {
+    const controller = new AbortController();
+
+    const loadCategories = async () => {
+      setCategoriesLoading(true);
+      setCategoriesError(false);
+
+      try {
+        const response = await fetch(
+          `${process.env.NEXT_PUBLIC_API_URL || "/api"}/categories`,
+          { signal: controller.signal }
+        );
+
+        if (!response.ok) {
+          throw new Error(`Categories API failed (HTTP ${response.status})`);
+        }
+
+        const data: unknown = await response.json();
+        if (
+          !Array.isArray(data) ||
+          !data.every(
+            (item) =>
+              item !== null &&
+              typeof item === "object" &&
+              typeof item.id === "number" &&
+              typeof item.name === "string"
+          )
+        ) {
+          throw new Error("รูปแบบข้อมูลหมวดหมู่จาก API ไม่ถูกต้อง");
+        }
+
+        if (!controller.signal.aborted) {
+          setCategories(data as Category[]);
+        }
+      } catch (error) {
+        if (!controller.signal.aborted) {
+          console.error("Failed to load categories:", error);
+          setCategoriesError(true);
+        }
+      } finally {
+        if (!controller.signal.aborted) {
+          setCategoriesLoading(false);
+        }
+      }
+    };
+
+    void loadCategories();
+    return () => controller.abort();
+  }, []);
+
   // 2. ฟังก์ชันส่งข้อมูลไปยัง Backend Laravel
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -57,8 +116,8 @@ export default function AddProductPage() {
       return;
     }
 
-    if (!category) {
-      alert("กรุณาเลือกหมวดหมู่สินค้า");
+    if (!category || !categories.some((item) => String(item.id) === category)) {
+      alert("กรุณาเลือกหมวดหมู่สินค้าที่มีอยู่ในระบบ");
       return;
     }
 
@@ -76,7 +135,7 @@ export default function AddProductPage() {
         formData.append("image", imageFile);
       }
 
-      const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/products`, {
+      const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL || "/api"}/products`, {
         method: "POST",
         headers: {
           Accept: "application/json",
@@ -200,11 +259,24 @@ export default function AddProductPage() {
                   <select
                     value={category}
                     onChange={(e) => setCategory(e.target.value)}
-                    className="w-full px-4 py-3 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-[#1B4D3E]/50 focus:border-[#1B4D3E] text-gray-900 bg-white transition"
+                    disabled={categoriesLoading || categoriesError || categories.length === 0}
+                    required
+                    className="w-full px-4 py-3 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-[#1B4D3E]/50 focus:border-[#1B4D3E] text-gray-900 bg-white transition disabled:bg-gray-100 disabled:cursor-not-allowed"
                   >
-                    <option value="">เลือกหมวดหมู่...</option>
-                    <option value="1">พระเครื่อง</option>
-                    <option value="2">ของสะสม</option>
+                    <option value="">
+                      {categoriesLoading
+                        ? "กำลังโหลดหมวดหมู่..."
+                        : categoriesError
+                          ? "โหลดหมวดหมู่ไม่สำเร็จ"
+                          : categories.length === 0
+                            ? "ยังไม่มีหมวดหมู่สินค้า"
+                            : "เลือกหมวดหมู่..."}
+                    </option>
+                    {categories.map((item) => (
+                      <option key={item.id} value={String(item.id)}>
+                        {item.name}
+                      </option>
+                    ))}
                   </select>
                 </div>
 
@@ -302,7 +374,7 @@ export default function AddProductPage() {
               </button>
               <button
                 type="submit"
-                disabled={loading}
+                disabled={loading || categoriesLoading || categoriesError || categories.length === 0}
                 className="px-8 py-3 bg-[#1B4D3E] text-white rounded-md font-bold hover:bg-[#143a2f] shadow-md transition disabled:bg-gray-400"
               >
                 {loading ? "กำลังบันทึก..." : "บันทึกและเผยแพร่"}
