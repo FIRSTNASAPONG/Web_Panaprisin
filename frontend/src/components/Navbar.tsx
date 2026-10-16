@@ -1,7 +1,6 @@
 "use client";
 
 import type { User } from "@/types/api";
-
 import React, { useState, useEffect } from 'react';
 import { useCart } from '../context/CartContext';
 import { useRouter } from 'next/navigation';
@@ -13,6 +12,7 @@ export default function Navbar() {
 
   const [user, setUser] = useState<User | null>(null);
   const [mounted, setMounted] = useState(false);
+  const [searchTerm, setSearchTerm] = useState('');
 
   const totalItems = cart.reduce((total, item) => total + item.quantity, 0);
 
@@ -26,7 +26,24 @@ export default function Navbar() {
         setUser(null);
       }
     }
+
+    if (typeof window !== 'undefined') {
+      const params = new URLSearchParams(window.location.search);
+      const q = params.get('search');
+      if (q) setSearchTerm(q);
+    }
   }, []);
+
+  // 🟢 ฟังก์ชันค้นหาสินค้าเมื่อกดปุ่มแว่นขยายหรือกด Enter
+  const handleSearch = (e: React.FormEvent) => {
+    e.preventDefault();
+    const trimmed = searchTerm.trim();
+    if (trimmed) {
+      router.push(`/?search=${encodeURIComponent(trimmed)}#products`);
+    } else {
+      router.push('/');
+    }
+  };
 
   // 🟢 ยิง POST /api/logout เพื่อ revoke token ตาม P1 Checklist
   const handleLogout = async () => {
@@ -43,7 +60,7 @@ export default function Navbar() {
           },
         });
       } catch (error) {
-        console.error('Logout error:', error);
+        console.warn('Logout error:', error);
       }
     }
 
@@ -101,20 +118,47 @@ export default function Navbar() {
       <header className="bg-[#1B4D3E] text-white pt-6 pb-4 sticky top-0 z-50 shadow-md border-b border-gray-200">
         <div className="container mx-auto px-4 max-w-6xl">
           <div className="flex items-center justify-between gap-8">
-            <Link href="/" className="flex-shrink-0 flex items-center gap-3 cursor-pointer hover:opacity-90 transition">
+            <Link
+              href="/"
+              onClick={() => setSearchTerm('')}
+              className="flex-shrink-0 flex items-center gap-3 cursor-pointer hover:opacity-90 transition"
+            >
               <h1 className="text-3xl font-bold tracking-wider">พณาไพรสิน</h1>
               <span className="border-l-2 border-white/30 h-6 hidden md:block"></span>
               <span className="text-sm font-medium text-green-200 hidden md:block">ของสะสม & ของเก่าโบราณ</span>
             </Link>
 
-            <div className="flex-grow max-w-xl">
-              <div className="flex bg-white rounded-sm overflow-hidden p-1">
-                <input type="text" placeholder="ค้นหาสินค้า และร้านค้า..." className="flex-grow px-4 py-1.5 text-gray-800 outline-none text-sm" />
-                <button className="bg-[#1B4D3E] px-6 py-1.5 rounded-sm hover:bg-[#143a2f] transition text-white">
+            {/* 🟢 ช่องค้นหาที่ใช้งานได้จริง */}
+            <form onSubmit={handleSearch} className="flex-grow max-w-xl">
+              <div className="flex bg-white rounded-sm overflow-hidden p-1 items-center">
+                <input
+                  type="text"
+                  value={searchTerm}
+                  onChange={(e) => setSearchTerm(e.target.value)}
+                  placeholder="ค้นหาสินค้า และร้านค้า..."
+                  className="flex-grow px-4 py-1.5 text-gray-800 outline-none text-sm"
+                />
+                {searchTerm && (
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setSearchTerm('');
+                      router.push('/');
+                    }}
+                    className="px-2 text-gray-400 hover:text-gray-600 text-xs font-bold"
+                    title="ล้างคำค้นหา"
+                  >
+                    ✕
+                  </button>
+                )}
+                <button
+                  type="submit"
+                  className="bg-[#1B4D3E] px-6 py-1.5 rounded-sm hover:bg-[#143a2f] transition text-white"
+                >
                   <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.3-4.3"/></svg>
                 </button>
               </div>
-            </div>
+            </form>
 
             <Link href="/cart" className="flex-shrink-0 mr-4 cursor-pointer hover:opacity-80 transition relative block">
               <svg xmlns="http://www.w3.org/2000/svg" width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="8" cy="21" r="1"/><circle cx="19" cy="21" r="1"/><path d="M2.05 2.05h2l2.66 12.42a2 2 0 0 0 2 1.58h9.78a2 2 0 0 0 1.95-1.57l1.65-7.43H5.12"/></svg>
