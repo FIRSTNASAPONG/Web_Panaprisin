@@ -31,7 +31,7 @@ class ProductController extends Controller
 
         // 2. ถ้า Seller มีการอัปโหลดไฟล์รูปมาด้วย
         if ($request->hasFile('image')) {
-            // ทริค: สร้างโฟลเดอร์แยกตาม ID คนขาย เช่น products/seller_5
+
             $folderName = 'products/seller_' . $user->id;
             
             // เซฟไฟล์ลงโฟลเดอร์ public และเก็บที่อยู่ไฟล์ (Path) ไว้

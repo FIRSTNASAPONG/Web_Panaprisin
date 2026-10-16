@@ -22,31 +22,49 @@ class SocialAuthController extends Controller
         try {
             $googleUser = Socialite::driver('google')->stateless()->user();
             
+            // ดึงข้อมูลชื่อดิบจาก Google (Google จะส่ง given_name และ family_name มาให้ด้วย)
+            $rawUser = $googleUser->getRaw();
+            
+            // กรณี Google ส่ง given_name/family_name มา ให้ใช้ค่านั้น 
+            // แต่ถ้าไม่มี ให้แยกจาก getName() ด้วยช่องว่าง (explode)
+            $fullName = trim($googleUser->getName());
+            $nameParts = explode(' ', $fullName, 2);
+
+            $firstName = $rawUser['given_name'] ?? ($nameParts[0] ?? $fullName);
+            $lastName  = $rawUser['family_name'] ?? ($nameParts[1] ?? '');
+
             // ค้นหา User ว่ามีอีเมลนี้ในระบบหรือยัง ถ้ายังให้สร้างใหม่
             $user = User::updateOrCreate(
                 ['email' => $googleUser->getEmail()],
                 [
-                    'name' => $googleUser->getName(),
-                    'google_id' => $googleUser->getId(),
-                    'avatar' => $googleUser->getAvatar(),
-                    // สร้างรหัสผ่านแบบสุ่มให้ไปเลย เพราะเราไม่ใช้
-                    'password' => Hash::make(Str::random(24)), 
-                    'first_name' => $googleUser->getName(), // ใส่แก้ขัดไปก่อน
-                    'last_name' => ' ',
+                    'first_name' => $firstName,
+                    'last_name'  => $lastName,
+                    'google_id'  => $googleUser->getId(),
+                    'avatar'     => $googleUser->getAvatar(),
+                    // สร้างรหัสผ่านแบบสุ่มให้ไปเลย เพราะเป็นการล็อกอินผ่าน Google
+                    'password'   => Hash::make(Str::random(24)), 
                 ]
             );
 
             // ออก Token ด้วย Sanctum
             $token = $user->createToken('auth_token')->plainTextToken;
             
-            // เด้งกลับไปที่หน้า Frontend พร้อมแนบ Token ไปทาง URL
+            // เด้งกลับไปที่หน้า Frontend พร้อมแนบ Token และข้อมูล User ไปทาง URL
             $frontendUrl = env('FRONTEND_URL', 'http://localhost:3000');
-            $userData = json_encode(['id' => $user->id, 'name' => $user->name, 'email' => $user->email]);
+            
+            $userData = json_encode([
+                'id'         => $user->id,
+                'first_name' => $user->first_name,
+                'last_name'  => $user->last_name,
+                'email'      => $user->email,
+                'role'       => $user->role ?? 'buyer',
+                'avatar'     => $user->avatar,
+            ]);
             
             return redirect()->away($frontendUrl . '/auth/callback?token=' . $token . '&user=' . urlencode($userData));
 
         } catch (\Exception $e) {
-            return redirect()->away(env('FRONTEND_URL') . '/login?error=GoogleLoginFailed');
+            return redirect()->away(env('FRONTEND_URL', 'http://localhost:3000') . '/login?error=GoogleLoginFailed');
         }
     }
 }
