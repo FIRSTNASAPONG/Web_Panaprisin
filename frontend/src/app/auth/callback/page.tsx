@@ -4,6 +4,16 @@ import React, { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { useCart } from "../../../context/CartContext";
 
+
+interface GoogleUserData {
+  id?: number | string;
+  name?: string;
+  first_name?: string;
+  email?: string;
+  role?: string;
+  [key: string]: unknown;
+}
+
 export default function AuthCallbackPage() {
   const router = useRouter();
   const { fetchCartFromDB } = useCart();
@@ -24,8 +34,8 @@ export default function AuthCallbackPage() {
       // 1. บันทึก Token ลง localStorage
       localStorage.setItem("token", token);
 
-      // 2. แปลงข้อมูล User ที่แนบมากับ URL
-      let userData: Record<string, any> = {};
+      // 2. แปลงข้อมูล User ที่แนบมากับ URL (ใช้ Type GoogleUserData ที่สร้างไว้แทน any)
+      let userData: GoogleUserData = {};
       if (userParam) {
         try {
           userData = JSON.parse(userParam);
