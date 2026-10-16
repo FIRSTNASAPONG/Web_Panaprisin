@@ -72,9 +72,9 @@ class ProductController extends Controller
 
         // 3. ตรวจสอบสิทธิ์ (Authorization)
         // - ถ้าไม่ใช่ admin และ ไม่ใช่เจ้าของสินค้า -> เตะออก! (403)
-        if ($user->role !== 'admin' && $product->user_id !== $user->id) {
-            return response()->json(['message' => 'คุณไม่มีสิทธิ์ลบสินค้าของร้านอื่น!'], 403);
-        }
+        if ($user->role !== 'admin' && (int)$product->user_id !== (int)$user->id) {
+        return response()->json(['message' => 'คุณไม่มีสิทธิ์ลบสินค้าของร้านอื่น!'], 403);
+}
 
         // 4. ถ้าผ่านด่านมาได้ (เป็นแอดมิน หรือ เป็นเจ้าของจริงๆ) ก็สั่งลบได้เลย
         $product->delete();
