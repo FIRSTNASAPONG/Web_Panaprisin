@@ -10,6 +10,7 @@ use App\Http\Controllers\OrderController;
 use App\Http\Controllers\ReviewController;
 use App\Http\Controllers\ReportController;
 use App\Http\Controllers\CartController;
+use App\Models\Category;
 
 
 // ไม่ต้อง Login ก็เข้าได้
@@ -20,6 +21,13 @@ Route::get('/products/{id}', [ProductController::class, 'show']);
 Route::get('/auth/google/redirect', [SocialAuthController::class, 'redirect']);
 Route::get('/auth/google/callback', [SocialAuthController::class, 'callback']);
 Route::get('/products/{productId}/reviews', [ReviewController::class, 'index']); // ดูรีวิว
+Route::get('/categories', function () {
+    return response()->json(
+        Category::query()
+            ->orderBy('id')
+            ->get(['id', 'name'])
+    );
+});
 
 // ต้อง Login ก่อนถึงจะเข้าได้
 Route::middleware('auth:sanctum')->group(function () {

@@ -1,9 +1,8 @@
-"use client";
-
-import React, { useState, useEffect } from 'react';
+import React from 'react';
+import type { Product, ProductListResponse } from "@/types/api";
 import Navbar from '../components/Navbar';
 import Footer from '../components/Footer';
-import { useCart } from '../context/CartContext';
+import ProductGrid from '../components/ProductGrid';
 
 const MOCK_CATEGORIES = [
   { id: 1, name: 'พระเครื่อง', icon: <svg xmlns="http://www.w3.org/2000/svg" width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="text-[#1B4D3E]"><path d="M6 3h12l4 6-10 13L2 9Z"/><path d="M11 3 8 9l4 13 4-13-3-6"/><path d="M2 9h20"/></svg> },
@@ -12,48 +11,26 @@ const MOCK_CATEGORIES = [
   { id: 4, name: 'ของสะสมอื่นๆ', icon: <svg xmlns="http://www.w3.org/2000/svg" width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="text-[#1B4D3E]"><path d="M2 9a3 3 0 0 1 0 6v2a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2v-2a3 3 0 0 1 0-6V7a2 2 0 0 0-2-2H4a2 2 0 0 0-2 2Z"/><path d="M13 5v2"/><path d="M13 17v2"/><path d="M13 11v2"/></svg> },
 ];
 
-const FALLBACK_PRODUCTS = [
-  { id: 1, name: 'ตู้ไม้สักโบราณ อายุ 50 ปี', price: 15000, image_url: '', stock: 1 },
-  { id: 2, name: 'เหรียญกษาปณ์ รัชกาลที่ 5', price: 2500, image_url: '', stock: 5 },
-  { id: 3, name: 'พระสมเด็จวัดระฆัง', price: 45000, image_url: '', stock: 0 },
-  { id: 4, name: 'แจกันลายครามสมัยอยุธยา', price: 8500, image_url: '', stock: 2 },
-  { id: 5, name: 'รูปปั้นทองเหลือง เทพเจ้ากวนอู', price: 3200, image_url: '', stock: 3 },
-  { id: 6, name: 'เครื่องพิมพ์ดีดโบราณ', price: 4500, image_url: '', stock: 0 }
-];
+async function getInitialProducts(): Promise<Product[]> {
+  const internalUrl = process.env.INTERNAL_API_URL || "http://nginx/api";
+  try {
+    const res = await fetch(`${internalUrl}/products`, {
+      headers: { Accept: "application/json" },
+      cache: "no-store",
+    });
+    if (!res.ok) return [];
+    const data: ProductListResponse = await res.json();
+    if (Array.isArray(data)) return data;
+    if (data && Array.isArray(data.data)) return data.data;
+    if (data && Array.isArray(data.products)) return data.products;
+    return [];
+  } catch {
+    return [];
+  }
+}
 
-export default function App() {
-  const [products, setProducts] = useState<any[]>([]);
-  const { addToCart } = useCart(); 
-
-  useEffect(() => {
-    fetch(`${process.env.NEXT_PUBLIC_API_URL}/products`, {
-      method: 'GET',
-      headers: {
-        'Accept': 'application/json',
-        'Cache-Control': 'no-cache' // กัน Cache
-      },
-      cache: 'no-store' // 🟢 ป้องกัน Next.js จำข้อมูลเก่า เพื่อให้สินค้าใหม่ขึ้นทันที
-    })
-      .then(async (res) => {
-        const text = await res.text();
-        try {
-          const data = JSON.parse(text);
-          if (Array.isArray(data)) setProducts(data);
-          else if (data && Array.isArray(data.data)) setProducts(data.data);
-          else if (data && Array.isArray(data.products)) setProducts(data.products);
-          else setProducts(FALLBACK_PRODUCTS); 
-        } catch (error) {
-          console.warn("Backend ส่งข้อมูลมาผิดพลาด ใช้ข้อมูลจำลองแทน");
-          setProducts(FALLBACK_PRODUCTS); 
-        }
-      })
-      .catch(err => {
-        console.error('Failed to fetch products:', err);
-        setProducts(FALLBACK_PRODUCTS);
-      });
-  }, []);
-
-  const safeProducts = Array.isArray(products) ? products : FALLBACK_PRODUCTS;
+export default async function App() {
+  const initialProducts = await getInitialProducts();
 
   return (
     <div className="min-h-screen bg-[#f5f5f5] font-sans flex flex-col">
@@ -62,7 +39,6 @@ export default function App() {
       <main className="container mx-auto px-4 py-6 max-w-6xl flex-grow">
         {/* Banner Section */}
         <div className="bg-[#1B4D3E] rounded-sm mb-6 relative overflow-hidden">
-          <div className="absolute inset-0 opacity-20 bg-[url('https://placehold.co/1200x400/1B4D3E/1B4D3E')] mix-blend-overlay"></div>
           <div className="py-16 px-8 relative z-10 flex flex-col items-center justify-center min-h-[300px]">
             <div className="text-center p-8 bg-white/10 backdrop-blur-sm rounded-xl border border-white/20 max-w-4xl w-full">
               <h2 className="text-3xl md:text-5xl font-bold text-white mb-4">พณาไพรสิน</h2>
@@ -72,7 +48,7 @@ export default function App() {
               <p className="text-sm md:text-base text-green-100/80 mb-8">
                 โซนล้านนาริมคลอง บ้านถวาย อำเภอหางดง จังหวัดเชียงใหม่ 50230
               </p>
-              <a href="/" className="bg-white text-[#1B4D3E] font-bold py-3 px-10 rounded hover:bg-gray-100 transition shadow-lg text-lg inline-block">
+              <a href="#products" className="bg-white text-[#1B4D3E] font-bold py-3 px-10 rounded hover:bg-gray-100 transition shadow-lg text-lg inline-block">
                 ช้อปเลย
               </a>
             </div>
@@ -95,70 +71,13 @@ export default function App() {
         </div>
 
         {/* Products Grid */}
-        <div className="mb-4 flex justify-between items-end">
+        <div id="products" className="mb-4 flex justify-between items-end">
           <h2 className="text-[#1B4D3E] text-xl font-bold uppercase tracking-wider border-b-4 border-[#1B4D3E] pb-2 inline-block">
             สินค้าแนะนำประจำวัน
           </h2>
         </div>
-        
-        <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-6 gap-2 md:gap-4">
-          {safeProducts.map((product) => {
-            // เช็คสต็อก
-            const isOutOfStock = product.stock !== undefined && product.stock <= 0;
 
-            return (
-              <a href={`/product/${product.id}`} key={product.id} className="block relative group">
-                <div className="bg-white hover:border-[#1B4D3E] border border-transparent hover:shadow-md transition cursor-pointer flex flex-col h-full">
-                  <div className="relative pt-[100%]">
-                    <img 
-                      src={product.image_url ? `http://localhost:8080/storage/${product.image_url}` : "/image_289eb4.jpg"} 
-                      alt={product.name} 
-                      className="absolute top-0 left-0 w-full h-full object-cover" 
-                      onError={(e) => { e.currentTarget.src = '/image_289eb4.jpg' }}
-                    />
-                    
-                    {/* 🟢 ป้ายทับรูปภาพกรณีสินค้าหมด */}
-                    {isOutOfStock && (
-                      <div className="absolute inset-0 bg-black/60 flex items-center justify-center z-10 backdrop-blur-[1px]">
-                        <span className="text-white font-bold bg-red-600 px-3 py-1 rounded-sm uppercase tracking-wider text-xs">สินค้าหมด</span>
-                      </div>
-                    )}
-                  </div>
-                  <div className="p-2 flex flex-col flex-grow">
-                    <div className="text-sm text-gray-800 line-clamp-2 mb-2 min-h-[40px]">{product.name}</div>
-                    <div className="mt-auto flex items-center justify-between">
-                      <div className="text-[#1B4D3E] font-bold text-lg">฿{Number(product.price || 0).toLocaleString()}</div>
-                      
-                      <button 
-                        onClick={(e) => {
-                          e.preventDefault(); 
-                          if (isOutOfStock) return; // ถ้าของหมดกดไม่ได้
-                          
-                          addToCart({
-                            id: product.id,
-                            name: product.name,
-                            price: Number(product.price),
-                            image: product.image_url || '/image_289eb4.jpg',
-                            quantity: 1
-                          });
-                          alert('เพิ่มลงตะกร้าสำเร็จ!');
-                        }}
-                        disabled={isOutOfStock}
-                        className={`text-xs px-3 py-1.5 rounded-sm transition z-10 font-medium ${
-                          isOutOfStock 
-                            ? 'bg-gray-200 text-gray-400 cursor-not-allowed' 
-                            : 'bg-[#1B4D3E] text-white hover:bg-[#143a2f]'
-                        }`}
-                      >
-                        {isOutOfStock ? 'หมด' : 'ใส่ตะกร้า'}
-                      </button>
-                    </div>
-                  </div>
-                </div>
-              </a>
-            );
-          })}
-        </div>
+        <ProductGrid initialProducts={initialProducts} />
       </main>
 
       <Footer />

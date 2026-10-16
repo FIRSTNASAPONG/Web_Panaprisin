@@ -1,9 +1,11 @@
 "use client";
 
-import React, { createContext, useContext, useState, ReactNode, useEffect } from 'react';
+import type { ApiCart } from "@/types/api";
+import React, { createContext, useContext, useState, ReactNode, useEffect, useCallback } from 'react';
 
 export interface CartItem {
-  id: number;
+  id: number;            // คือ product_id
+  cart_item_id?: number; // เก็บ id ของตาราง cart_items เอาไว้ส่งให้ Backend ตอนแก้จำนวน/ลบ
   name: string;
   price: number;
   image?: string;
@@ -12,10 +14,11 @@ export interface CartItem {
 
 interface CartContextType {
   cart: CartItem[];
-  addToCart: (newItem: CartItem) => void;
-  removeFromCart: (id: number) => void;
+  addToCart: (newItem: CartItem) => Promise<boolean>;
+  removeFromCart: (id: number) => Promise<void>;
   clearCart: () => void;
-  updateQuantity: (id: number, quantity: number) => void; // 🟢 เพิ่มตรงนี้
+  updateQuantity: (id: number, quantity: number) => Promise<void>;
+  fetchCartFromDB: () => Promise<void>;
 }
 
 const CartContext = createContext<CartContextType | undefined>(undefined);
@@ -23,64 +26,182 @@ const CartContext = createContext<CartContextType | undefined>(undefined);
 export function CartProvider({ children }: { children: ReactNode }) {
   const [cart, setCart] = useState<CartItem[]>([]);
   const [isLoaded, setIsLoaded] = useState(false);
+  const apiUrl = process.env.NEXT_PUBLIC_API_URL || "/api";
 
-  // โหลดข้อมูลจาก LocalStorage ตอนเปิดเว็บ
-  useEffect(() => {
-    const savedCart = localStorage.getItem('cart');
-    if (savedCart) {
-      setCart(JSON.parse(savedCart));
+  // 1. ฟังก์ชันดึงตะกร้าจาก Database (GET /api/cart)
+  const fetchCartFromDB = useCallback(async () => {
+    const token = typeof window !== 'undefined' ? localStorage.getItem('token') : null;
+
+    if (!token) {
+      const savedCart = localStorage.getItem('cart');
+      if (savedCart) {
+        try {
+          setCart(JSON.parse(savedCart));
+        } catch {
+          setCart([]);
+        }
+      }
+      setIsLoaded(true);
+      return;
     }
-    setIsLoaded(true);
-  }, []);
 
-  // เซฟข้อมูลลง LocalStorage อัตโนมัติทุกครั้งที่ตะกร้าเปลี่ยน
+    try {
+      const res = await fetch(`${apiUrl}/cart`, {
+        method: 'GET',
+        headers: {
+          'Accept': 'application/json',
+          'Authorization': `Bearer ${token}`,
+        },
+        cache: 'no-store',
+      });
+
+      if (res.ok) {
+        const data: ApiCart = await res.json();
+        const items = Array.isArray(data.items) ? data.items : [];
+        const mappedCart: CartItem[] = items.map((item) => ({
+          id: Number(item.product_id),
+          cart_item_id: Number(item.id),
+          name: item.product?.name || 'ไม่มีชื่อสินค้า',
+          price: Number(item.product?.price || 0),
+          image: item.product?.image_url || item.product?.image || '',
+          quantity: Number(item.quantity || 1),
+        }));
+
+        setCart(mappedCart);
+        localStorage.setItem('cart', JSON.stringify(mappedCart));
+      }
+    } catch (error) {
+      console.warn('Failed to fetch cart from DB:', error);
+    } finally {
+      setIsLoaded(true);
+    }
+  }, [apiUrl]);
+
+  useEffect(() => {
+    fetchCartFromDB();
+  }, [fetchCartFromDB]);
+
   useEffect(() => {
     if (isLoaded) {
       localStorage.setItem('cart', JSON.stringify(cart));
     }
   }, [cart, isLoaded]);
 
-  // ฟังก์ชันเพิ่มของลงตะกร้า
-  const addToCart = (newItem: CartItem) => {
-    setCart((prevCart) => {
-      // เช็คว่ามีของชิ้นนี้ในตะกร้าหรือยัง
-      const existingItem = prevCart.find(item => item.id === newItem.id);
+  // 2. เพิ่มสินค้าลงตะกร้า (POST /api/cart)
+  const addToCart = async (newItem: CartItem): Promise<boolean> => {
+    const token = localStorage.getItem('token');
 
+    if (token) {
+      try {
+        const res = await fetch(`${apiUrl}/cart`, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'Accept': 'application/json',
+            'Authorization': `Bearer ${token}`,
+          },
+          body: JSON.stringify({
+            product_id: newItem.id,
+            quantity: newItem.quantity,
+          }),
+        });
+
+        if (res.ok) {
+          await fetchCartFromDB();
+          return true;
+        } else {
+          const err = await res.json().catch(() => ({}));
+          alert(err.message || 'ไม่สามารถเพิ่มสินค้าลงตะกร้าได้');
+          return false;
+        }
+      } catch (error) {
+        console.warn('Error adding to cart:', error);
+        alert('เกิดข้อผิดพลาดในการเชื่อมต่อเซิร์ฟเวอร์');
+        return false;
+      }
+    }
+
+    // กรณียังไม่ได้ล็อกอิน ให้บวกใน LocalStorage ไปก่อน
+    setCart((prevCart) => {
+      const existingItem = prevCart.find((item) => item.id === newItem.id);
       if (existingItem) {
-        // ถ้ามีแล้ว ให้บวกจำนวนเพิ่ม
-        return prevCart.map(item =>
+        return prevCart.map((item) =>
           item.id === newItem.id
             ? { ...item, quantity: item.quantity + newItem.quantity }
             : item
         );
       }
-
-      // ถ้ายังไม่มี ให้ใส่ของชิ้นใหม่เข้าไป
       return [...prevCart, newItem];
     });
-    alert(`เพิ่ม ${newItem.name} ลงตะกร้าแล้ว!`);
+    return true;
   };
 
-  const removeFromCart = (id: number) => {
-    setCart(prevCart => prevCart.filter(item => item.id !== id));
-  };
+  // 3. แก้ไขจำนวนสินค้า (PUT /api/cart/{itemId})
+  const updateQuantity = async (id: number, quantity: number) => {
+    const newQty = Math.max(1, quantity);
+    const token = localStorage.getItem('token');
+    const targetItem = cart.find((item) => item.id === id);
 
-  const clearCart = () => {
-    setCart([]);
-  };
-
-  // 🟢 ฟังก์ชันใหม่: อัปเดตจำนวนสินค้าเมื่อกดปุ่ม + / -
-  const updateQuantity = (id: number, quantity: number) => {
-    setCart(prevCart =>
-      prevCart.map(item =>
-        item.id === id ? { ...item, quantity: Math.max(1, quantity) } : item
+    setCart((prevCart) =>
+      prevCart.map((item) =>
+        item.id === id ? { ...item, quantity: newQty } : item
       )
     );
+
+    if (token && targetItem?.cart_item_id) {
+      try {
+        const res = await fetch(`${apiUrl}/cart/${targetItem.cart_item_id}`, {
+          method: 'PUT',
+          headers: {
+            'Content-Type': 'application/json',
+            'Accept': 'application/json',
+            'Authorization': `Bearer ${token}`,
+          },
+          body: JSON.stringify({ quantity: newQty }),
+        });
+
+        if (!res.ok) {
+          const err = await res.json().catch(() => ({}));
+          if (err.message) alert(err.message);
+          await fetchCartFromDB();
+        }
+      } catch (error) {
+        console.warn('Error updating quantity:', error);
+        await fetchCartFromDB();
+      }
+    }
+  };
+
+  // 4. ลบสินค้าออกจากตะกร้า (DELETE /api/cart/{itemId})
+  const removeFromCart = async (id: number) => {
+    const token = localStorage.getItem('token');
+    const targetItem = cart.find((item) => item.id === id);
+
+    setCart((prevCart) => prevCart.filter((item) => item.id !== id));
+
+    if (token && targetItem?.cart_item_id) {
+      try {
+        await fetch(`${apiUrl}/cart/${targetItem.cart_item_id}`, {
+          method: 'DELETE',
+          headers: {
+            'Accept': 'application/json',
+            'Authorization': `Bearer ${token}`,
+          },
+        });
+      } catch (error) {
+        console.warn('Error removing item:', error);
+      }
+    }
+  };
+
+  // 5. ล้างตะกร้าหน้าบ้าน
+  const clearCart = () => {
+    setCart([]);
+    localStorage.removeItem('cart');
   };
 
   return (
-    // 🟢 อย่าลืมส่ง updateQuantity ออกไปให้หน้าอื่นใช้ด้วย
-    <CartContext.Provider value={{ cart, addToCart, removeFromCart, clearCart, updateQuantity }}>
+    <CartContext.Provider value={{ cart, addToCart, removeFromCart, clearCart, updateQuantity, fetchCartFromDB }}>
       {children}
     </CartContext.Provider>
   );

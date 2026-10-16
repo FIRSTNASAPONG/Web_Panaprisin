@@ -1,0 +1,44 @@
+name: Deploy Production to Azure
+
+on:
+  release:
+    types: [published]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: panaprisin-production-deployment
+  cancel-in-progress: false
+
+jobs:
+  deploy:
+    name: Deploy approved release
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+
+    steps:
+      - name: Configure SSH
+        env:
+          SSH_PRIVATE_KEY: ${{ secrets.CD_SSH_KEY }}
+          SSH_KNOWN_HOSTS: ${{ secrets.CD_KNOWN_HOSTS }}
+        run: |
+          set -euo pipefail
+          umask 077
+          mkdir -p ~/.ssh
+
+          printf '%s\n' "$SSH_PRIVATE_KEY" > ~/.ssh/id_ed25519
+          printf '%s\n' "$SSH_KNOWN_HOSTS" > ~/.ssh/known_hosts
+
+          ssh-keygen -y -f ~/.ssh/id_ed25519 >/dev/null
+
+      - name: Trigger Azure deployment
+        run: |
+          ssh \
+            -i ~/.ssh/id_ed25519 \
+            -o BatchMode=yes \
+            -o StrictHostKeyChecking=yes \
+            -o ConnectTimeout=15 \
+            azureuser@70.153.139.129 \
+            deploy

@@ -80,7 +80,7 @@ $admin->createToken('admin-token')->plainTextToken;
 $seller = App\Models\User::create(['first_name' => 'Seller', 'last_name' => 'Shop', 'email' => 'seller@test.com', 'password' => bcrypt('password123'), 'role' => 'seller']);
 $seller->createToken('seller-token')->plainTextToken;
 ```
-**สร้าง Customer:**
+**สร้าง Buyer:**
 ```php
 $customer = App\Models\User::create(['first_name' => 'Customer', 'last_name' => 'Somchai', 'email' => 'customer@test.com', 'password' => bcrypt('password123'), 'role' => 'customer']);
 $customer->createToken('customer-token')->plainTextToken;

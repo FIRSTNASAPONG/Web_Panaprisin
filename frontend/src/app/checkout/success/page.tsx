@@ -1,6 +1,8 @@
 "use client";
 
-import React, { useEffect, useState } from 'react';
+import Image from "next/image";
+
+import React, { useState } from 'react';
 import Navbar from '../../../components/Navbar';
 import Footer from '../../../components/Footer';
 import { useRouter } from 'next/navigation';
@@ -10,8 +12,8 @@ export default function CheckoutSuccessPage() {
   
   // สมมติว่าเราดึงข้อมูลออเดอร์ล่าสุดมาจาก State หรือ LocalStorage
   // (ในระบบจริงจะดึงผ่าน API ด้วย Order ID)
-  const [orderId, setOrderId] = useState('PN-20261009-001');
-  const [grandTotal, setGrandTotal] = useState(1500000);
+  const [orderId] = useState('PN-20261009-001');
+  const [grandTotal] = useState(1500000);
   const [showQR, setShowQR] = useState(false);
 
   return (
@@ -139,7 +141,7 @@ export default function CheckoutSuccessPage() {
                   
                   {/* ภาพ QR Code (ดึงมาจากเน็ต หรือใช้รูปในโฟลเดอร์ public ก็ได้) */}
                   <div className="bg-white p-4 rounded-xl shadow-sm border border-gray-200 mb-4">
-                     <img 
+                     <Image unoptimized loading="eager" width={160} height={160}
                        src="https://upload.wikimedia.org/wikipedia/commons/d/d0/QR_code_for_mobile_English_Wikipedia.svg" 
                        alt="QR Code PromptPay" 
                        className="w-40 h-40 opacity-80 mix-blend-multiply" 
