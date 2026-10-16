@@ -96,9 +96,9 @@ export default function ProductGrid({
       });
   }, []);
 
-  // 🟢 กรองสินค้าตามหมวดหมู่ที่คลิก และคำค้นหาจาก Navbar
-  const filteredProducts = products.filter((product: any) => {
-    const prodCatId = Number(product.category_id ?? product.category?.id ?? 0);
+  // 🟢 แก้ไข: เช็ค category_id อย่างเดียว ป้องกัน TS2339 Error
+  const filteredProducts = products.filter((product: Product) => {
+    const prodCatId = Number(product.category_id ?? 0);
     const matchesCategory =
       selectedCategory === null || prodCatId === selectedCategory;
 
@@ -118,7 +118,7 @@ export default function ProductGrid({
 
   return (
     <>
-      {/* Categories Section (คลิกเลือกหมวดหมู่ได้) */}
+      {/* Categories Section */}
       <div className="bg-white p-4 rounded-sm shadow-sm mb-6">
         <div className="flex items-center justify-between mb-4">
           <div className="text-gray-500 font-medium uppercase text-sm">
