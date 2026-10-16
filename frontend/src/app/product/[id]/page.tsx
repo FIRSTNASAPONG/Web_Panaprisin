@@ -1,9 +1,7 @@
 "use client";
 
 import Image from "next/image";
-
 import type { Product } from "@/types/api";
-
 import React, { useState, useEffect } from 'react';
 import { useParams, useRouter } from 'next/navigation';
 import { useCart } from '../../../context/CartContext';
@@ -46,7 +44,7 @@ export default function ProductDetailPage() {
           }
         })
         .catch((err) => {
-          console.error('Failed to fetch product:', err);
+          console.warn('Failed to fetch product:', err);
           setProduct(null);
         })
         .finally(() => {
@@ -55,7 +53,6 @@ export default function ProductDetailPage() {
     }
   }, [productId]);
 
-  // 🟢 ดึงค่าสต็อกจาก stock_quantity เป็นหลัก (รองรับกรณีเป็นเลข 0 ได้ถูกต้อง)
   const maxStock = product ? Number(product.stock_quantity ?? product.stock ?? 0) : 0;
   const isOutOfStock = maxStock <= 0;
 
@@ -67,24 +64,25 @@ export default function ProductDetailPage() {
     if (quantity < maxStock) setQuantity(quantity + 1);
   };
 
-  // 🟢 รอให้ยิง API เข้าตะกร้าเสร็จจริง
   const handleAddToCart = async (redirectToCart = false) => {
     if (!product || isOutOfStock || isAdding) return;
 
     setIsAdding(true);
     try {
-      await addToCart({
+      const ok = await addToCart({
         id: product.id,
         name: product.name,
         price: Number(product.price),
-        image: product.image_url || '/image_289eb4.jpg',
+        image: product.image_url || product.image || '/image_289eb4.jpg',
         quantity: quantity
       });
 
-      if (redirectToCart) {
-        router.push('/cart');
-      } else {
-        alert(`เพิ่ม "${product.name}" ลงตะกร้าสำเร็จ!`);
+      if (ok) {
+        if (redirectToCart) {
+          router.push('/cart');
+        } else {
+          alert(`เพิ่ม "${product.name}" ลงตะกร้าสำเร็จ!`);
+        }
       }
     } finally {
       setIsAdding(false);

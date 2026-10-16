@@ -1,16 +1,8 @@
-"use client";
-
-import Link from "next/link";
-
-import Image from "next/image";
-
+import React from 'react';
 import type { Product, ProductListResponse } from "@/types/api";
-
-import React, { useState, useEffect } from 'react';
 import Navbar from '../components/Navbar';
 import Footer from '../components/Footer';
-import { useCart } from '../context/CartContext';
-import { getProductImageUrl } from "@/lib/image";
+import ProductGrid from '../components/ProductGrid';
 
 const MOCK_CATEGORIES = [
   { id: 1, name: 'พระเครื่อง', icon: <svg xmlns="http://www.w3.org/2000/svg" width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="text-[#1B4D3E]"><path d="M6 3h12l4 6-10 13L2 9Z"/><path d="M11 3 8 9l4 13 4-13-3-6"/><path d="M2 9h20"/></svg> },
@@ -19,36 +11,26 @@ const MOCK_CATEGORIES = [
   { id: 4, name: 'ของสะสมอื่นๆ', icon: <svg xmlns="http://www.w3.org/2000/svg" width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="text-[#1B4D3E]"><path d="M2 9a3 3 0 0 1 0 6v2a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2v-2a3 3 0 0 1 0-6V7a2 2 0 0 0-2-2H4a2 2 0 0 0-2 2Z"/><path d="M13 5v2"/><path d="M13 17v2"/><path d="M13 11v2"/></svg> },
 ];
 
-export default function App() {
-  const [products, setProducts] = useState<Product[]>([]);
-  const [loading, setLoading] = useState(true);
-  const { addToCart } = useCart();
+async function getInitialProducts(): Promise<Product[]> {
+  const internalUrl = process.env.INTERNAL_API_URL || "http://nginx/api";
+  try {
+    const res = await fetch(`${internalUrl}/products`, {
+      headers: { Accept: "application/json" },
+      cache: "no-store",
+    });
+    if (!res.ok) return [];
+    const data: ProductListResponse = await res.json();
+    if (Array.isArray(data)) return data;
+    if (data && Array.isArray(data.data)) return data.data;
+    if (data && Array.isArray(data.products)) return data.products;
+    return [];
+  } catch {
+    return [];
+  }
+}
 
-  useEffect(() => {
-    fetch(`${process.env.NEXT_PUBLIC_API_URL}/products`, {
-      method: 'GET',
-      headers: {
-        'Accept': 'application/json',
-        'Cache-Control': 'no-cache'
-      },
-      cache: 'no-store'
-    })
-      .then(async (res) => {
-        if (!res.ok) throw new Error('Failed to fetch');
-        const data: ProductListResponse = await res.json();
-        if (Array.isArray(data)) setProducts(data);
-        else if (data && Array.isArray(data.data)) setProducts(data.data);
-        else if (data && Array.isArray(data.products)) setProducts(data.products);
-        else setProducts([]);
-      })
-      .catch((err) => {
-        console.error('Failed to fetch products:', err);
-        setProducts([]);
-      })
-      .finally(() => {
-        setLoading(false);
-      });
-  }, []);
+export default async function App() {
+  const initialProducts = await getInitialProducts();
 
   return (
     <div className="min-h-screen bg-[#f5f5f5] font-sans flex flex-col">
@@ -95,75 +77,7 @@ export default function App() {
           </h2>
         </div>
 
-        {loading ? (
-          <div className="bg-white p-12 text-center text-gray-500 font-medium rounded-sm shadow-sm">
-            กำลังโหลดรายการสินค้า...
-          </div>
-        ) : products.length === 0 ? (
-          <div className="bg-white p-12 text-center text-gray-500 font-medium rounded-sm shadow-sm">
-            ยังไม่มีสินค้าในระบบขณะนี้
-          </div>
-        ) : (
-          <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-6 gap-2 md:gap-4">
-            {products.map((product) => {
-              // 🟢 เช็คสต็อกจาก stock_quantity ของฐานข้อมูลจริง
-              const stockCount = Number(product.stock_quantity ?? product.stock ?? 0);
-              const isOutOfStock = stockCount <= 0;
-
-              return (
-                <Link href={`/product/${product.id}`} key={product.id} className="block relative group">
-                  <div className="bg-white hover:border-[#1B4D3E] border border-transparent hover:shadow-md transition cursor-pointer flex flex-col h-full">
-                    <div className="relative pt-[100%]">
-                      <Image unoptimized loading="eager" width={400} height={400}
-                        src={getProductImageUrl(product.image_url || product.image)}
-                        alt={product.name} 
-                        className="absolute top-0 left-0 w-full h-full object-cover" 
-                        onError={(e) => { e.currentTarget.src = '/image_289eb4.jpg' }}
-                      />
-                      
-                      {isOutOfStock && (
-                        <div className="absolute inset-0 bg-black/60 flex items-center justify-center z-10 backdrop-blur-[1px]">
-                          <span className="text-white font-bold bg-red-600 px-3 py-1 rounded-sm uppercase tracking-wider text-xs">สินค้าหมด</span>
-                        </div>
-                      )}
-                    </div>
-                    <div className="p-2 flex flex-col flex-grow">
-                      <div className="text-sm text-gray-800 line-clamp-2 mb-1 min-h-[40px]">{product.name}</div>
-                      <div className="text-xs text-gray-400 mb-2">คงเหลือ {stockCount} ชิ้น</div>
-                      <div className="mt-auto flex items-center justify-between">
-                        <div className="text-[#1B4D3E] font-bold text-lg">฿{Number(product.price || 0).toLocaleString()}</div>
-                        
-                        <button 
-                          onClick={async (e) => {
-                            e.preventDefault(); 
-                            if (isOutOfStock) return;
-                            
-                            await addToCart({
-                              id: product.id,
-                              name: product.name,
-                              price: Number(product.price),
-                              image: product.image_url || '/image_289eb4.jpg',
-                              quantity: 1
-                            });
-                            alert(`เพิ่ม "${product.name}" ลงตะกร้าแล้ว!`);
-                          }}
-                          disabled={isOutOfStock}
-                          className={`text-xs px-3 py-1.5 rounded-sm transition z-10 font-medium ${
-                            isOutOfStock 
-                              ? 'bg-gray-200 text-gray-400 cursor-not-allowed' 
-                              : 'bg-[#1B4D3E] text-white hover:bg-[#143a2f]'
-                          }`}
-                        >
-                          {isOutOfStock ? 'หมด' : 'ใส่ตะกร้า'}
-                        </button>
-                      </div>
-                    </div>
-                  </div>
-                </Link>
-              );
-            })}
-          </div>
-        )}
+        <ProductGrid initialProducts={initialProducts} />
       </main>
 
       <Footer />

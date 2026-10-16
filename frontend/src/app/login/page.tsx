@@ -1,14 +1,12 @@
 "use client";
 
 import Image from "next/image";
-
 import { isAxiosError } from "axios";
 import type { ApiError } from "@/types/api";
-
 import React, { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import api from '@/lib/axios';
-import { useCart } from '../../context/CartContext'; // 🟢 ดึง CartContext มาซิงค์ตอน Login
+import { useCart } from '../../context/CartContext';
 import Link from "next/link";
 
 export default function LoginPage() {
@@ -29,11 +27,9 @@ export default function LoginPage() {
       const res = await api.post('/login', { email, password });
       const data = res.data;
       
-      // เก็บ Token และข้อมูล User
       localStorage.setItem('token', data.access_token || data.token);
       localStorage.setItem('user', JSON.stringify(data.user));
       
-      // 🟢 ซิงค์ข้อมูลตะกร้าจากฐานข้อมูลทันทีที่ Login สำเร็จ (ตาม P0 Checklist)
       await fetchCartFromDB();
       
       if (data.user.role === 'seller' || data.user.role === 'admin') {
@@ -44,7 +40,7 @@ export default function LoginPage() {
       
     } catch (error: unknown) {
       const errorData = isAxiosError<ApiError>(error) ? error.response?.data : undefined;
-      console.error('Login error:', error);
+      console.warn('Login error:', error);
       const backendMessage = errorData?.message || 'อีเมลหรือรหัสผ่านไม่ถูกต้อง กรุณาลองใหม่อีกครั้ง';
       setErrorMessage(backendMessage);
     } finally {

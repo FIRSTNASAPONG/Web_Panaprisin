@@ -1,10 +1,8 @@
 "use client";
 
 import Image from "next/image";
-
 import { isAxiosError } from "axios";
 import type { ApiError } from "@/types/api";
-
 import React, { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import api from '@/lib/axios';
@@ -35,20 +33,18 @@ export default function SignupPage() {
     setIsLoading(true);
 
     try {
-      // 🟢 ส่ง first_name และ last_name ให้ตรงกับที่ Laravel ตรวจสอบ
       const res = await api.post('/register', {
         first_name: firstName.trim(),
         last_name: lastName.trim(),
-        name: `${firstName.trim()} ${lastName.trim()}`, // ส่งเผื่อไว้ทั้ง 2 รูปแบบ
+        name: `${firstName.trim()} ${lastName.trim()}`,
         email: email.trim(),
         password: password,
         password_confirmation: passwordConfirmation,
-        role: role, // 'buyer' หรือ 'seller'
+        role: role,
       });
 
       const data = res.data;
 
-      // ถ้า Backend ส่ง token กลับมาหลังสมัคร ให้ล็อกอินอัตโนมัติเลย
       if (data.access_token || data.token) {
         localStorage.setItem('token', data.access_token || data.token);
         if (data.user) {
@@ -66,7 +62,6 @@ export default function SignupPage() {
       }
     } catch (error: unknown) {
       const errorData = isAxiosError<ApiError>(error) ? error.response?.data : undefined;
-      // ใช้ console.warn แทน console.error เพื่อไม่ให้ Next.js 15 เด้งป๊อปอัปดำทับหน้าจอ
       console.warn('Signup validation error:', errorData);
 
       const errors = errorData?.errors;

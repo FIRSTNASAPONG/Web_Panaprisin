@@ -1,19 +1,17 @@
 "use client";
 
 import Image from "next/image";
-
 import React, { useState, useEffect } from 'react';
+import { useRouter } from 'next/navigation';
+import { useCart } from '../../context/CartContext';
 import Navbar from '../../components/Navbar';
 import Footer from '../../components/Footer';
-import { useCart } from '../../context/CartContext';
-import { useRouter } from 'next/navigation';
 import { getProductImageUrl } from "@/lib/image";
 
 export default function CheckoutPage() {
   const { cart, clearCart, fetchCartFromDB } = useCart();
   const router = useRouter();
 
-  // State สำหรับฟอร์ม
   const [email, setEmail] = useState('somchai@example.com'); 
   const [phone, setPhone] = useState('080-000-0000');
   const [fullName, setFullName] = useState('สมชาย ใจดี');
@@ -24,14 +22,12 @@ export default function CheckoutPage() {
   const [zipcode, setZipcode] = useState('50230');
   const [paymentMethod, setPaymentMethod] = useState<'bank_transfer' | 'promptpay'>('bank_transfer');
   
-  // State สำหรับรูปสลิป
   const [slipImage, setSlipImage] = useState<File | null>(null);
   const [slipPreview, setSlipPreview] = useState<string | null>(null);
 
   const [isProcessing, setIsProcessing] = useState(false);
   const [isTermsAccepted, setIsTermsAccepted] = useState(false);
 
-  // โหลดข้อมูลผู้ใช้และซิงค์ตะกร้าล่าสุดจาก DB ตอนเข้าหน้านี้
   useEffect(() => {
     const userStr = localStorage.getItem('user');
     if (userStr) {
@@ -39,20 +35,19 @@ export default function CheckoutPage() {
         const user = JSON.parse(userStr);
         if (user.email) setEmail(user.email);
         if (user.name) setFullName(user.name);
+        else if (user.first_name) setFullName(`${user.first_name} ${user.last_name || ''}`.trim());
       } catch (e) {
-        console.error(e);
+        console.warn(e);
       }
     }
     fetchCartFromDB();
   }, [fetchCartFromDB]);
 
-  // คำนวณยอดรวม
   const totalPrice = cart.reduce((total, item) => total + (item.price * item.quantity), 0);
   const shippingFee = 0;
   const discount = 0;
   const grandTotal = totalPrice + shippingFee - discount;
 
-  // ฟังก์ชันแสดงพรีวิวรูปสลิป
   const handleSlipChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (file) {
@@ -63,11 +58,8 @@ export default function CheckoutPage() {
     }
   };
 
-  // 🟢 ฟังก์ชันส่งข้อมูลการสั่งซื้อไปที่ POST /api/checkout (ตรงตาม OrderController.php)
   const handlePlaceOrder = async (e: React.FormEvent) => {
     e.preventDefault();
-    
-    // ป้องกันการกดปุ่มซ้ำ (P0 Checklist)
     if (isProcessing) return;
 
     if (cart.length === 0) {
@@ -91,15 +83,10 @@ export default function CheckoutPage() {
 
     try {
       const formData = new FormData();
-      
-      // รวมชื่อ เบอร์โทร และที่อยู่จัดส่งเข้าด้วยกันเพื่อส่งเข้าฟิลด์ shipping_address
       const fullAddress = `${fullName} (${phone}) ${address} ต.${subDistrict} อ.${district} จ.${province} ${zipcode}`;
       
-      // 🟢 2 ฟิลด์หลักที่ OrderController.php บังคับตรวจ (validate)
       formData.append('shipping_address', fullAddress);
       formData.append('payment_method', paymentMethod);
-
-      // แนบข้อมูลเสริมเผื่อใช้
       formData.append('email', email);
       formData.append('phone', phone);
       formData.append('customer_name', fullName);
@@ -107,8 +94,8 @@ export default function CheckoutPage() {
         formData.append('slip_image', slipImage);
       }
 
-      // 🟢 ยิงไปที่ /checkout พร้อมแนบ Bearer Token
-      const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/checkout`, {
+      const apiUrl = process.env.NEXT_PUBLIC_API_URL || "/api";
+      const res = await fetch(`${apiUrl}/checkout`, {
         method: 'POST',
         headers: {
           'Accept': 'application/json',
@@ -120,13 +107,13 @@ export default function CheckoutPage() {
       const data = await res.json().catch(() => ({}));
 
       if (res.ok) {
-        clearCart(); // ล้างตะกร้าหน้าบ้าน (หลังบ้านล้างให้แล้วใน Controller)
-        router.push('/checkout/success'); // พาวาร์ปไปหน้าสำเร็จ
+        clearCart();
+        router.push('/checkout/success');
       } else {
         alert(data.message || 'เกิดข้อผิดพลาดในการส่งคำสั่งซื้อ');
       }
     } catch (error) {
-      console.error('Order Error:', error);
+      console.warn('Order Error:', error);
       alert('ไม่สามารถเชื่อมต่อกับเซิร์ฟเวอร์ได้');
     } finally {
       setIsProcessing(false);
@@ -137,7 +124,6 @@ export default function CheckoutPage() {
     <div className="min-h-screen bg-[#f5f6f6] font-sans flex flex-col">
       <Navbar />
 
-      {/* Progress Bar (ส่วนบนสุดใต้ Navbar) */}
       <div className="bg-[#f5f6f6] pt-8 pb-4">
         <div className="container mx-auto px-4 max-w-6xl">
           <div className="flex items-center text-sm font-medium mb-6 text-gray-500">
@@ -150,7 +136,6 @@ export default function CheckoutPage() {
           
           <h1 className="text-2xl font-bold text-[#1B4D3E] mb-6">ชำระเงินและแจ้งโอน</h1>
 
-          {/* Stepper แบบ Figma */}
           <div className="flex rounded-md overflow-hidden bg-white/60 mb-4 font-bold text-sm shadow-sm">
             <div className="flex-1 py-3 text-center text-gray-500 bg-gray-200">1 ตะกร้าสินค้า</div>
             <div className="flex-1 py-3 text-center text-white bg-[#1B4D3E]">2 ชำระเงิน & แนบสลิป</div>
@@ -160,7 +145,6 @@ export default function CheckoutPage() {
       </div>
 
       <main className="container mx-auto px-4 max-w-6xl flex-grow pb-16">
-        
         {cart.length === 0 ? (
            <div className="bg-white rounded-md shadow-sm p-12 text-center border border-gray-100">
              <h2 className="text-xl font-bold text-gray-800 mb-4">ไม่มีสินค้าให้ชำระเงิน</h2>
@@ -169,10 +153,7 @@ export default function CheckoutPage() {
         ) : (
           <form onSubmit={handlePlaceOrder} className="flex flex-col lg:flex-row gap-8">
             
-            {/* ===================== ฝั่งซ้าย: ข้อมูลลูกค้า & อัปโหลดสลิป ===================== */}
             <div className="w-full lg:w-2/3 space-y-6">
-              
-              {/* 1. ข้อมูลติดต่อ */}
               <div className="bg-white rounded-md shadow-sm border border-gray-100 p-8">
                 <h2 className="text-lg font-bold text-gray-900 mb-6 border-b pb-3">ข้อมูลติดต่อ</h2>
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
@@ -180,20 +161,19 @@ export default function CheckoutPage() {
                     <label className="block text-sm font-bold text-gray-700 mb-2">อีเมล</label>
                     <input 
                       type="email" value={email} onChange={(e) => setEmail(e.target.value)} required
-                      className="w-full px-4 py-2.5 border border-gray-300 rounded-md focus:outline-none focus:border-[#1B4D3E] focus:ring-1 focus:ring-[#1B4D3E] text-sm text-gray-800 bg-white"
+                      className="w-full px-4 py-2.5 border border-gray-300 rounded-md focus:outline-none focus:border-[#1B4D3E] text-sm text-gray-800 bg-white"
                     />
                   </div>
                   <div>
                     <label className="block text-sm font-bold text-gray-700 mb-2">เบอร์โทรศัพท์</label>
                     <input 
                       type="tel" value={phone} onChange={(e) => setPhone(e.target.value)} required
-                      className="w-full px-4 py-2.5 border border-gray-300 rounded-md focus:outline-none focus:border-[#1B4D3E] focus:ring-1 focus:ring-[#1B4D3E] text-sm text-gray-800 bg-white"
+                      className="w-full px-4 py-2.5 border border-gray-300 rounded-md focus:outline-none focus:border-[#1B4D3E] text-sm text-gray-800 bg-white"
                     />
                   </div>
                 </div>
               </div>
 
-              {/* 2. ที่อยู่จัดส่ง */}
               <div className="bg-white rounded-md shadow-sm border border-gray-100 p-8">
                 <h2 className="text-lg font-bold text-gray-900 mb-6 border-b pb-3">ที่อยู่จัดส่ง</h2>
                 <div className="space-y-5">
@@ -249,16 +229,13 @@ export default function CheckoutPage() {
                 </div>
               </div>
 
-              {/* 3. วิธีชำระเงิน & แนบสลิป */}
               <div className="bg-white rounded-md shadow-sm border border-gray-100 p-8">
                 <h2 className="text-lg font-bold text-gray-900 mb-6 border-b pb-3">ช่องทางชำระเงินและแจ้งโอน</h2>
 
                 <div className="grid grid-cols-2 gap-4 mb-6">
                   <label className={`border rounded-md p-4 flex items-center cursor-pointer ${paymentMethod === 'bank_transfer' ? 'border-[#1B4D3E] bg-green-50/50' : 'border-gray-200'}`}>
                     <input
-                      type="radio"
-                      name="payment_method"
-                      value="bank_transfer"
+                      type="radio" name="payment_method" value="bank_transfer"
                       checked={paymentMethod === 'bank_transfer'}
                       onChange={() => setPaymentMethod('bank_transfer')}
                       className="text-[#1B4D3E] focus:ring-[#1B4D3E]"
@@ -267,9 +244,7 @@ export default function CheckoutPage() {
                   </label>
                   <label className={`border rounded-md p-4 flex items-center cursor-pointer ${paymentMethod === 'promptpay' ? 'border-[#1B4D3E] bg-green-50/50' : 'border-gray-200'}`}>
                     <input
-                      type="radio"
-                      name="payment_method"
-                      value="promptpay"
+                      type="radio" name="payment_method" value="promptpay"
                       checked={paymentMethod === 'promptpay'}
                       onChange={() => setPaymentMethod('promptpay')}
                       className="text-[#1B4D3E] focus:ring-[#1B4D3E]"
@@ -290,34 +265,27 @@ export default function CheckoutPage() {
 
                 <div>
                   <label className="block text-sm font-bold text-gray-900 mb-3">แนบหลักฐานการโอนเงิน (สลิป)</label>
-                  
                   {slipPreview && (
                     <div className="mb-4 w-48 h-auto border-2 border-gray-200 rounded-md overflow-hidden mx-auto shadow-sm">
-                      <Image unoptimized loading="eager" width={96} height={96} src={slipPreview} alt="Slip Preview" className="w-full h-full object-cover" />
+                      <Image unoptimized loading="eager" width={96} height={96} src={slipPreview} alt="Slip" className="w-full h-full object-cover" />
                     </div>
                   )}
-
                   <label className="cursor-pointer bg-white border-2 border-dashed border-[#1B4D3E] text-[#1B4D3E] px-4 py-4 rounded-md font-bold hover:bg-green-50 transition text-sm flex flex-col justify-center items-center">
-                    <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="mb-2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>
                     คลิกเพื่ออัปโหลดสลิปโอนเงิน (JPG, PNG)
                     <input type="file" className="hidden" accept="image/*" onChange={handleSlipChange} />
                   </label>
                 </div>
               </div>
 
-              {/* ปุ่มย้อนกลับ */}
               <button type="button" onClick={() => router.push('/cart')} className="flex items-center gap-2 text-sm font-bold text-gray-700 bg-white border border-gray-300 px-6 py-3 rounded-md hover:bg-gray-50 w-max shadow-sm">
                 <span>←</span> กลับไปตรวจสอบตะกร้าสินค้า
               </button>
-
             </div>
 
-            {/* ===================== ฝั่งขวา: สรุปคำสั่งซื้อ ===================== */}
             <div className="w-full lg:w-1/3">
               <div className="bg-white rounded-md shadow-sm border border-gray-100 p-8 sticky top-6">
                 <h2 className="text-lg font-bold text-gray-900 mb-6 border-b pb-3">ตรวจสอบคำสั่งซื้อ</h2>
                 
-                {/* รายการสินค้า */}
                 <div className="space-y-4 mb-6">
                   {cart.map((item) => (
                     <div key={item.id} className="flex gap-4">
@@ -337,7 +305,6 @@ export default function CheckoutPage() {
                   ))}
                 </div>
 
-                {/* สรุปยอดเงิน */}
                 <div className="border-t border-gray-200 pt-5 space-y-3 text-sm">
                   <div className="flex justify-between text-gray-600 font-medium">
                     <span>ยอดรวมสินค้า ({cart.length} ชิ้น)</span>
@@ -349,13 +316,11 @@ export default function CheckoutPage() {
                   </div>
                 </div>
 
-                {/* ยอดสุทธิ */}
                 <div className="border-t border-gray-200 pt-5 mt-5 flex justify-between items-center mb-6">
                   <span className="font-bold text-gray-900 text-lg">ยอดชำระสุทธิ</span>
                   <span className="text-2xl font-bold text-[#1B4D3E]">฿{grandTotal.toLocaleString()}</span>
                 </div>
 
-                {/* Checkbox ยืนยัน */}
                 <label className="flex items-start mb-6 cursor-pointer">
                   <input 
                     type="checkbox" 
@@ -377,8 +342,6 @@ export default function CheckoutPage() {
                 >
                   {isProcessing ? 'กำลังส่งข้อมูล...' : 'ยืนยันคำสั่งซื้อ'}
                 </button>
-                
-                <p className="text-xs text-gray-400 text-center mt-4 font-medium">ร้านค้าจะจัดส่งสินค้าหลังจากตรวจสอบคำสั่งซื้อแล้ว</p>
               </div>
             </div>
 
