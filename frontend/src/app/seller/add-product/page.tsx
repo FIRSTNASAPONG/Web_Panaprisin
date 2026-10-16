@@ -10,12 +10,46 @@ type Category = {
   name: string;
 };
 
-const FALLBACK_CATEGORIES: Category[] = [
-  { id: 1, name: "พระเครื่อง" },
-  { id: 2, name: "รูปปั้นและทองเหลือง" },
-  { id: 3, name: "เฟอร์นิเจอร์ไม้เก่า" },
-  { id: 4, name: "ของสะสมอื่นๆ" },
-];
+// JSON from an external API must be validated before use.
+function isRecord(value: unknown): value is Record<string, unknown> {
+  return typeof value === "object" && value !== null && !Array.isArray(value);
+}
+
+function isCategory(value: unknown): value is Category {
+  return (
+    isRecord(value) &&
+    typeof value.id === "number" &&
+    Number.isSafeInteger(value.id) &&
+    value.id > 0 &&
+    typeof value.name === "string" &&
+    value.name.trim().length > 0
+  );
+}
+
+function parseCategories(payload: unknown): Category[] {
+  let list: unknown = payload;
+  if (isRecord(payload)) {
+    list = payload.data ?? payload.categories;
+  }
+  if (!Array.isArray(list)) {
+    throw new Error("รูปแบบข้อมูลหมวดหมู่ไม่ถูกต้อง");
+  }
+  return (list as unknown[]).filter(isCategory);
+}
+
+function getApiError(payload: unknown, status: number): string {
+  if (isRecord(payload)) {
+    if (isRecord(payload.errors)) {
+      const details = Object.values(payload.errors)
+        .flatMap((value) => (Array.isArray(value) ? value : [value]))
+        .filter((value): value is string => typeof value === "string")
+        .join("\n");
+      if (details) return details;
+    }
+    if (typeof payload.message === "string") return payload.message;
+  }
+  return `บันทึกสินค้าไม่สำเร็จ (HTTP ${status})`;
+}
 
 export default function AddProductPage() {
   const router = useRouter();
@@ -30,6 +64,7 @@ export default function AddProductPage() {
 
   const [categories, setCategories] = useState<Category[]>([]);
   const [categoriesLoading, setCategoriesLoading] = useState(true);
+  const [categoriesError, setCategoriesError] = useState("");
 
   const [imageFile, setImageFile] = useState<File | null>(null);
   const [imagePreview, setImagePreview] = useState<string | null>(null);
@@ -61,13 +96,13 @@ export default function AddProductPage() {
     }
   }, [router]);
 
-  // โหลดหมวดหมู่จาก API พร้อมระบบสำรองหาก API ส่งโครงสร้างต่างออกไป
+  // โหลด ID หมวดหมู่จริงจากฐานข้อมูล ไม่เดา ID เมื่อ API ใช้งานไม่ได้
   useEffect(() => {
     const controller = new AbortController();
 
     const loadCategories = async () => {
       setCategoriesLoading(true);
-
+      setCategoriesError("");
       try {
         const response = await fetch(
           `${process.env.NEXT_PUBLIC_API_URL || "/api"}/categories`,
@@ -77,42 +112,29 @@ export default function AddProductPage() {
             cache: "no-store",
           }
         );
-
         if (!response.ok) {
-          throw new Error(`HTTP ${response.status}`);
+          throw new Error(`โหลดหมวดหมู่ไม่สำเร็จ (HTTP ${response.status})`);
         }
 
-        const raw: any = await response.json();
-        const list = Array.isArray(raw)
-          ? raw
-          : Array.isArray(raw?.data)
-          ? raw.data
-          : Array.isArray(raw?.categories)
-          ? raw.categories
-          : [];
-
-        const normalized: Category[] = list
-          .filter((item: any) => item && item.id !== undefined && item.name)
-          .map((item: any) => ({
-            id: Number(item.id),
-            name: String(item.name),
-          }));
-
+        const payload: unknown = await response.json();
+        const normalized = parseCategories(payload);
         if (!controller.signal.aborted) {
-          const finalCategories =
-            normalized.length > 0 ? normalized : FALLBACK_CATEGORIES;
-          setCategories(finalCategories);
-          setCategory(String(finalCategories[0].id));
+          setCategories(normalized);
+          setCategory("");
+          if (normalized.length === 0) {
+            setCategoriesError("ยังไม่มีหมวดหมู่สินค้า กรุณาติดต่อผู้ดูแลระบบ");
+          }
         }
-      } catch {
+      } catch (error: unknown) {
         if (!controller.signal.aborted) {
-          setCategories(FALLBACK_CATEGORIES);
-          setCategory(String(FALLBACK_CATEGORIES[0].id));
+          setCategories([]);
+          setCategory("");
+          setCategoriesError(
+            error instanceof Error ? error.message : "โหลดหมวดหมู่ไม่สำเร็จ"
+          );
         }
       } finally {
-        if (!controller.signal.aborted) {
-          setCategoriesLoading(false);
-        }
+        if (!controller.signal.aborted) setCategoriesLoading(false);
       }
     };
 
@@ -132,7 +154,7 @@ export default function AddProductPage() {
       return;
     }
 
-    if (!category) {
+    if (!categories.some((item) => String(item.id) === category)) {
       setErrorMessage("กรุณาเลือกหมวดหมู่สินค้า");
       return;
     }
@@ -172,18 +194,10 @@ export default function AddProductPage() {
         throw new Error(`เซิร์ฟเวอร์ตอบกลับผิดรูปแบบ (HTTP ${res.status})`);
       }
 
-      const data = await res.json();
+      const data: unknown = await res.json();
 
       if (!res.ok) {
-        const validationDetails = data.errors
-          ? Object.values(data.errors).flat().join("\n")
-          : "";
-
-        throw new Error(
-          validationDetails ||
-            data.message ||
-            `บันทึกสินค้าไม่สำเร็จ (HTTP ${res.status})`
-        );
+        throw new Error(getApiError(data, res.status));
       }
 
       alert("เพิ่มสินค้าสำเร็จ");
@@ -308,7 +322,9 @@ export default function AddProductPage() {
                     <option value="">
                       {categoriesLoading
                         ? "กำลังโหลดหมวดหมู่..."
-                        : "เลือกหมวดหมู่..."}
+                        : categoriesError
+                          ? "ไม่สามารถเลือกหมวดหมู่ได้"
+                          : "เลือกหมวดหมู่..."}
                     </option>
                     {categories.map((item) => (
                       <option key={item.id} value={String(item.id)}>
@@ -316,6 +332,11 @@ export default function AddProductPage() {
                       </option>
                     ))}
                   </select>
+                  {categoriesError && (
+                    <p className="mt-2 text-sm text-red-600" role="alert">
+                      {categoriesError}
+                    </p>
+                  )}
                 </div>
 
                 <div>
@@ -419,7 +440,7 @@ export default function AddProductPage() {
               </button>
               <button
                 type="submit"
-                disabled={loading || categoriesLoading || categories.length === 0}
+                disabled={loading || categoriesLoading || categories.length === 0 || Boolean(categoriesError)}
                 className="px-8 py-3 bg-[#1B4D3E] text-white rounded-md font-bold hover:bg-[#143a2f] shadow-md transition disabled:bg-gray-400"
               >
                 {loading ? "กำลังบันทึก..." : "บันทึกและเผยแพร่"}
