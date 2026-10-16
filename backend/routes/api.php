@@ -50,10 +50,12 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::get('/reports/sales', [ReportController::class, 'salesSummary']);
     //order
     Route::get('/orders', [OrderController::class, 'index']);
+    // ลบสินค้า
+    Route::delete('/products/{id}', [ProductController::class, 'destroy']); 
 });
 
 Route::middleware(['auth:sanctum', IsAdmin::class])->group(function () {
-    Route::delete('/products/{id}', [ProductController::class, 'destroy']); // แอดมินลบสินค้า
+   
     // แอดมินอนุมัติรีวิว
     Route::put('/admin/reviews/{id}/approve', function ($id) {
         App\Models\Review::where('id', $id)->update(['status' => 'approved']);
