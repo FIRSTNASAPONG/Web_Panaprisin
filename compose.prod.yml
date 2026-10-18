@@ -3,6 +3,8 @@ name: panaprisin-prod-test
 services:
   frontend:
     image: web-panaprisin-frontend:prod-test
+    environment:
+      INTERNAL_API_URL: http://webserver/api
     platform: linux/amd64
     restart: unless-stopped
     expose:

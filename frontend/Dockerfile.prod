@@ -33,6 +33,7 @@ FROM node:24.14-alpine AS runner
 WORKDIR /app
 
 ENV NODE_ENV=production
+ENV INTERNAL_API_URL=http://webserver/api
 ENV NEXT_TELEMETRY_DISABLED=1
 ENV HOSTNAME=0.0.0.0
 ENV PORT=3000
