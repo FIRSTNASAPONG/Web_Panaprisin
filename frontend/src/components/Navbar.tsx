@@ -34,6 +34,15 @@ export default function Navbar() {
     }
   }, []);
 
+  useEffect(() => {
+    const refreshUser = () => {
+      try { setUser(JSON.parse(localStorage.getItem('user') || 'null')); }
+      catch { setUser(null); }
+    };
+    window.addEventListener('user-updated', refreshUser);
+    return () => window.removeEventListener('user-updated', refreshUser);
+  }, []);
+
   // 🟢 ฟังก์ชันค้นหาสินค้าเมื่อกดปุ่มแว่นขยายหรือกด Enter
   const handleSearch = (e: React.FormEvent) => {
     e.preventDefault();
@@ -77,7 +86,7 @@ export default function Navbar() {
   return (
     <>
       <div className="bg-[#143a2f] text-white text-sm py-1">
-        <div className="container mx-auto px-4 flex justify-between items-center max-w-6xl">
+        <div className="container mx-auto px-4 flex flex-wrap gap-2 justify-between items-center max-w-6xl">
           <div className="flex space-x-4">
             <Link href="/seller" className="hover:text-gray-300">Seller Centre</Link>
             <span className="border-l border-gray-500"></span>
@@ -90,7 +99,7 @@ export default function Navbar() {
               </a>
             </div>
           </div>
-          <div className="flex space-x-4 items-center">
+          <div className="flex flex-wrap gap-2 sm:gap-4 items-center">
             <a href="#" className="hover:text-gray-300 flex items-center gap-1">
               <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="10"/><path d="M12 2a14.5 14.5 0 0 0 0 20 14.5 14.5 0 0 0 0-20"/><path d="M2 12h20"/></svg>
               ไทย
@@ -98,6 +107,7 @@ export default function Navbar() {
             
             {user ? (
               <>
+                {user.role === 'buyer' && <Link href="/account" className="hover:underline">บัญชีของฉัน</Link>}
                 <span className="font-bold text-green-200 ml-2">
                   สวัสดี, {user.first_name || user.name || 'ผู้ใช้งาน'}
                 </span>
@@ -117,7 +127,7 @@ export default function Navbar() {
 
       <header className="bg-[#1B4D3E] text-white pt-6 pb-4 sticky top-0 z-50 shadow-md border-b border-gray-200">
         <div className="container mx-auto px-4 max-w-6xl">
-          <div className="flex items-center justify-between gap-8">
+          <div className="flex flex-wrap sm:flex-nowrap items-center justify-between gap-4 sm:gap-8">
             <Link
               href="/"
               onClick={() => setSearchTerm('')}
@@ -129,14 +139,14 @@ export default function Navbar() {
             </Link>
 
             {/* 🟢 ช่องค้นหาที่ใช้งานได้จริง */}
-            <form onSubmit={handleSearch} className="flex-grow max-w-xl">
+            <form onSubmit={handleSearch} className="order-last sm:order-none w-full sm:w-auto min-w-0 flex-grow max-w-xl">
               <div className="flex bg-white rounded-sm overflow-hidden p-1 items-center">
                 <input
                   type="text"
                   value={searchTerm}
                   onChange={(e) => setSearchTerm(e.target.value)}
                   placeholder="ค้นหาสินค้า และร้านค้า..."
-                  className="flex-grow px-4 py-1.5 text-gray-800 outline-none text-sm"
+                  className="min-w-0 w-full flex-grow px-4 py-1.5 text-gray-800 outline-none text-sm"
                 />
                 {searchTerm && (
                   <button

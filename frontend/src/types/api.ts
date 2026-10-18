@@ -7,6 +7,8 @@ export interface User {
   first_name: string;
   last_name: string;
   email: string;
+  phone?: string | null;
+  address?: string | null;
   role: 'buyer' | 'seller' | 'admin';
   name?: string; // Legacy display-name fallback used by the UI.
 }
@@ -31,6 +33,7 @@ export interface Product {
 export type OrderStatus = 'pending' | 'paid' | 'shipped' | 'completed' | 'cancelled';
 
 export interface OrderItem {
+  product_name?: string | null;
   product_id: number;
   quantity: number;
   subtotal: Decimal;
@@ -72,3 +75,27 @@ export interface ApiError {
 // Preserve the response envelopes already supported by the frontend.
 export type ProductListResponse = Product[] | { data?: Product[]; products?: Product[] };
 export type OrderListResponse = Order[] | { data?: Order[] };
+
+export interface Payment {
+  payment_method: 'promptpay' | 'bank_transfer' | 'credit_card';
+  payment_status: 'pending' | 'completed' | 'failed';
+  amount: Decimal;
+}
+export interface BuyerOrder extends Order {
+  order_status: OrderStatus;
+  shipping_address: string;
+  payment: Payment | null;
+}
+export interface Paginated<T> {
+  data: T[];
+  current_page: number;
+  last_page: number;
+  total: number;
+}
+export interface AccountOverview {
+  user: User;
+  total_orders: number;
+  pending_payment: number;
+  shipping_orders: number;
+  recent_orders: BuyerOrder[];
+}

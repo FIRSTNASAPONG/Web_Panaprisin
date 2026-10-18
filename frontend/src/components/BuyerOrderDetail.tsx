@@ -1,0 +1,10 @@
+"use client";
+import Link from 'next/link';
+import { useAccountData } from '@/lib/account';
+import type { BuyerOrder } from '@/types/api';
+import { AccountState, OrderBadge, money, accountCard, accountButton } from './AccountContent';
+export default function BuyerOrderDetail({ id, confirmation = false }: { id: string; confirmation?: boolean }) {
+  const state = useAccountData<BuyerOrder>(`/me/orders/${encodeURIComponent(id || 'missing')}`);
+  const order = state.data;
+  return <><AccountState {...state}/>{order && <div className="space-y-6"><div className={accountCard}><h1 className="text-2xl font-bold text-[#1B4D3E] mb-4">{confirmation ? 'บันทึกคำสั่งซื้อแล้ว' : 'รายละเอียดคำสั่งซื้อ'} #{order.id}</h1><p className="mb-3">{order.created_at ? new Date(order.created_at).toLocaleString('th-TH') : '-'}</p><div className="flex flex-wrap gap-3"><OrderBadge status={order.order_status}/><OrderBadge payment status={order.payment?.payment_status}/></div>{order.payment?.payment_status === 'pending' && <p className="mt-4 text-amber-800">คำสั่งซื้อนี้ยังไม่ยืนยันการชำระเงิน ระบบยังไม่เปิดรับชำระเงินออนไลน์หรือแนบสลิป</p>}</div><section className={accountCard}><h2 className="font-bold text-lg mb-4">รายการสินค้า</h2>{order.items.map((item, index) => <div key={index} className="border-b py-4 flex flex-wrap justify-between gap-3"><div><strong>{item.product_name || item.product?.name || `สินค้า #${item.product_id}`}</strong><p>จำนวน {item.quantity} × {money(item.unit_price ?? 0)}</p></div><span>{money(item.subtotal)}</span></div>)}<p className="text-right text-xl font-bold text-[#1B4D3E] mt-4">ยอดรวม {money(order.total_amount)}</p></section><section className={accountCard}><h2 className="font-bold mb-2">ที่อยู่จัดส่ง</h2><p className="whitespace-pre-wrap break-words">{order.shipping_address}</p><h2 className="font-bold mt-4 mb-2">วิธีชำระเงิน</h2><p>{order.payment ? ({ bank_transfer: 'โอนเงินผ่านธนาคาร', promptpay: 'พร้อมเพย์', credit_card: 'บัตรเครดิต' })[order.payment.payment_method] : 'ไม่มีข้อมูล'}</p></section></div>}<Link href="/account/orders" className={`${accountButton} mt-6`}>ดูคำสั่งซื้อของฉัน</Link></>;
+}

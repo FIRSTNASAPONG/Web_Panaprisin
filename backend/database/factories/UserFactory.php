@@ -26,7 +26,7 @@ class UserFactory extends Factory
             // เพิ่มข้อมูลที่จำเป็นตามโครงสร้างใหม่
             'phone' => fake()->phoneNumber(),
             'address' => fake()->address(),
-            'role' => fake()->randomElement(['customer', 'seller', 'admin']),
+            'role' => 'buyer',
             
             // หมายเหตุ: ตัด email_verified_at และ remember_token ออกเพราะไม่มีในตารางแล้ว
         ];
