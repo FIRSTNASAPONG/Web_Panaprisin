@@ -49,6 +49,7 @@ class CartController extends Controller
             $item = CartItem::where('cart_id', $cart->id)
                 ->where('product_id', $product->id)
                 ->first();
+            abort_unless($product->is_active, 422, 'สินค้านี้ไม่เปิดขายแล้ว');
             $newQuantity = ($item?->quantity ?? 0)
                 + $data['quantity'];
             if ($newQuantity > $product->stock_quantity) {
@@ -85,6 +86,9 @@ class CartController extends Controller
             return response()->json(['message' => 'ไม่อนุญาต'], 403);
         }
 
+        if (!$cartItem->product?->is_active || $request->integer('quantity') > $cartItem->product->stock_quantity) {
+            throw ValidationException::withMessages(['quantity' => 'สินค้าไม่พร้อมขายหรือสต็อกไม่เพียงพอ']);
+        }
         $cartItem->update(['quantity' => $request->quantity]);
 
         return response()->json(['message' => 'อัปเดตจำนวนสำเร็จ']);

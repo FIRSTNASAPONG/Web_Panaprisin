@@ -3,7 +3,11 @@
 import Link from "next/link";
 import Image from "next/image";
 import React, { useState, useEffect } from "react";
-import { useRouter } from "next/navigation";
+import api from "@/lib/axios";
+import { errorMessage as apiErrorMessage } from "@/lib/account";
+import { getProductImageUrl } from "@/lib/image";
+import type { Product } from "@/types/api";
+import { useParams, useRouter } from "next/navigation";
 
 type Category = {
   id: number;
@@ -53,6 +57,9 @@ function getApiError(payload: unknown, status: number): string {
 
 export default function AddProductPage() {
   const router = useRouter();
+  const params = useParams<{ id?: string }>();
+  const editId = params.id;
+  const [productReady, setProductReady] = useState(false);
 
   const [name, setName] = useState("");
   const [category, setCategory] = useState("");
@@ -68,6 +75,17 @@ export default function AddProductPage() {
 
   const [imageFile, setImageFile] = useState<File | null>(null);
   const [imagePreview, setImagePreview] = useState<string | null>(null);
+
+  useEffect(() => {
+    if (!editId) return;
+    api.get<Product>(`/products/${encodeURIComponent(editId)}`).then(({ data }) => {
+      setName(data.name); setCategory(String(data.category_id));
+      setDescription(data.description || ''); setPrice(String(data.price));
+      setStock(String(data.stock_quantity));
+      if (data.image_url) setImagePreview(getProductImageUrl(data.image_url));
+      setProductReady(true);
+    }).catch((error: unknown) => setErrorMessage(apiErrorMessage(error)));
+  }, [editId]);
 
   const handleImageChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     setErrorMessage("");
@@ -120,7 +138,7 @@ export default function AddProductPage() {
         const normalized = parseCategories(payload);
         if (!controller.signal.aborted) {
           setCategories(normalized);
-          setCategory("");
+
           if (normalized.length === 0) {
             setCategoriesError("ยังไม่มีหมวดหมู่สินค้า กรุณาติดต่อผู้ดูแลระบบ");
           }
@@ -128,7 +146,7 @@ export default function AddProductPage() {
       } catch (error: unknown) {
         if (!controller.signal.aborted) {
           setCategories([]);
-          setCategory("");
+
           setCategoriesError(
             error instanceof Error ? error.message : "โหลดหมวดหมู่ไม่สำเร็จ"
           );
@@ -144,6 +162,7 @@ export default function AddProductPage() {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    if (loading || (editId && !productReady)) return;
     setErrorMessage("");
 
     const token = localStorage.getItem("token");
@@ -169,16 +188,15 @@ export default function AddProductPage() {
       formData.append("category_id", String(Number(category)));
       formData.append("stock_quantity", String(parseInt(stock, 10) || 0));
 
-      if (description.trim()) {
-        formData.append("description", description.trim());
-      }
+      formData.append("description", description.trim());
+      if (editId) formData.append("_method", "PATCH");
 
       if (imageFile) {
         formData.append("image", imageFile);
       }
 
       const res = await fetch(
-        `${process.env.NEXT_PUBLIC_API_URL || "/api"}/products`,
+        `${process.env.NEXT_PUBLIC_API_URL || "/api"}/products${editId ? `/${editId}` : ""}`,
         {
           method: "POST",
           headers: {
@@ -200,7 +218,7 @@ export default function AddProductPage() {
         throw new Error(getApiError(data, res.status));
       }
 
-      alert("เพิ่มสินค้าสำเร็จ");
+      alert("บันทึกสินค้าสำเร็จ");
       router.push("/seller/products");
     } catch (error) {
       const msg = error instanceof Error ? error.message : "เกิดข้อผิดพลาด";
@@ -275,14 +293,15 @@ export default function AddProductPage() {
       {/* Main Content Area */}
       <main className="flex-1 flex flex-col h-screen overflow-hidden">
         <header className="bg-white h-16 shadow-sm flex items-center justify-between px-8 shrink-0 border-b border-gray-200">
-          <h1 className="text-xl font-bold text-gray-800">เพิ่มสินค้าใหม่</h1>
+          <h1 className="text-xl font-bold text-gray-800">{editId ? "แก้ไขสินค้า" : "เพิ่มสินค้าใหม่"}</h1>
         </header>
 
         <form
           onSubmit={handleSubmit}
           className="flex-1 overflow-y-auto p-4 md:p-8 bg-gray-50"
         >
-          <div className="max-w-4xl mx-auto space-y-6">
+          <fieldset disabled={!!editId && !productReady} className="max-w-4xl mx-auto space-y-6">
+            {editId && !productReady && !errorMessage && <p role="status">กำลังโหลดสินค้า...</p>}
             {errorMessage && (
               <div className="bg-red-50 border-l-4 border-red-500 text-red-700 px-4 py-3 rounded-sm text-sm font-medium whitespace-pre-line">
                 {errorMessage}
@@ -440,13 +459,13 @@ export default function AddProductPage() {
               </button>
               <button
                 type="submit"
-                disabled={loading || categoriesLoading || categories.length === 0 || Boolean(categoriesError)}
+                disabled={(!!editId && !productReady) || loading || categoriesLoading || categories.length === 0 || Boolean(categoriesError)}
                 className="px-8 py-3 bg-[#1B4D3E] text-white rounded-md font-bold hover:bg-[#143a2f] shadow-md transition disabled:bg-gray-400"
               >
                 {loading ? "กำลังบันทึก..." : "บันทึกและเผยแพร่"}
               </button>
             </div>
-          </div>
+          </fieldset>
         </form>
       </main>
     </div>

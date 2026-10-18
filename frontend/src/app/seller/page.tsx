@@ -29,8 +29,8 @@ export default function SellerCentrePage() {
       };
 
       const [productsRes, ordersRes] = await Promise.all([
-        fetch(`${process.env.NEXT_PUBLIC_API_URL}/products`, { headers, cache: 'no-store' }),
-        fetch(`${process.env.NEXT_PUBLIC_API_URL}/orders`, { headers, cache: 'no-store' })
+        fetch(`${process.env.NEXT_PUBLIC_API_URL || "/api"}/products`, { headers, cache: 'no-store' }),
+        fetch(`${process.env.NEXT_PUBLIC_API_URL || "/api"}/orders`, { headers, cache: 'no-store' })
       ]);
 
       let myProducts: Product[] = [];

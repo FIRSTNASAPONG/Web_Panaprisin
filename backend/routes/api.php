@@ -40,6 +40,8 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::get('/me/orders/{id}', [\App\Http\Controllers\BuyerAccountController::class, 'order'])->whereNumber('id');
     Route::patch('/user', [\App\Http\Controllers\BuyerAccountController::class, 'updateProfile']);
     //products
+    Route::get('/me/products', [ProductController::class, 'mine']);
+    Route::match(['put', 'patch'], '/products/{id}', [ProductController::class, 'update'])->whereNumber('id');
     Route::post('/products', [ProductController::class, 'store']);
     //cart
     Route::get('/cart', [CartController::class, 'getCart']);           // ดึงตะกร้า
