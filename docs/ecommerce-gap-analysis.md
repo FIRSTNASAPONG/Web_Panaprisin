@@ -21,3 +21,6 @@ User hasMany orders/products; cart hasMany items; orders hasMany items and hasOn
 
 ## Validation / risk
 Controller inline validation เดิม ไม่มี Form Requests/Policies. New protected endpoints must enforce role and owner at backend. Payment pending is independent of order status; admin order status currently does not reconcile payments. No merchant credentials/payment verification workflow exists; do not claim payment success. User deletion cascade remains a separate history-retention risk. No E2E framework in package.json; browser evidence must be explicitly distinguished from build/API tests. No production config or database changes authorized.
+
+## Implementation status after verification
+Phase 1–2 implemented and tested; Phase 3 product update/archive implemented; Phase 4 buyer navigation/states/mobile verified. See feature-implementation-report.md and test-evidence.md for exact coverage. OAuth/CSRF security PR, guest cart merge, payment reconciliation, user-delete history protection, real review rating and P2 favorites remain open. No remote PR/push performed.

@@ -21,7 +21,7 @@ export default function SellerOrdersPage() {
   const fetchOrders = useCallback(async (token: string) => {
     setLoading(true);
     try {
-      const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/orders`, {
+      const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL || "/api"}/orders`, {
         method: 'GET',
         headers: {
           'Accept': 'application/json',
@@ -90,7 +90,7 @@ export default function SellerOrdersPage() {
 
     setStatusUpdateLoading(true);
     try {
-      const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/orders/${orderId}/status`, {
+      const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL || "/api"}/orders/${orderId}/status`, {
         method: 'PUT',
         headers: {
           'Content-Type': 'application/json',

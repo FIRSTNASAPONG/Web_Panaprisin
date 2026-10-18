@@ -19,11 +19,12 @@ export default function SellerProductsPage() {
   const fetchProducts = useCallback(async (currentUser: User) => {
     setLoading(true);
     try {
-      const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/products`, {
+      const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL || "/api"}/me/products`, {
         method: 'GET',
         headers: {
           'Accept': 'application/json',
-          'Cache-Control': 'no-cache'
+          'Cache-Control': 'no-cache',
+          'Authorization': `Bearer ${localStorage.getItem('token')}`
         },
         cache: 'no-store'
       });
@@ -64,14 +65,14 @@ export default function SellerProductsPage() {
 
   // ฟังก์ชันลบสินค้า (แนบ Token)
   const handleDeleteProduct = async (id: number, name: string) => {
-    if (!confirm(`คุณแน่ใจหรือไม่ว่าต้องการลบสินค้า "${name}"?`)) {
+    if (!confirm(`คุณแน่ใจหรือไม่ว่าต้องการนำสินค้าออกจากหน้าร้าน (ประวัติคำสั่งซื้อจะยังอยู่) "${name}"?`)) {
       return;
     }
 
     const token = localStorage.getItem('token');
     setDeleteLoading(id);
     try {
-      const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/products/${id}`, {
+      const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL || "/api"}/products/${id}`, {
         method: 'DELETE',
         headers: {
           'Accept': 'application/json',
@@ -213,6 +214,7 @@ export default function SellerProductsPage() {
                             )}
                           </td>
                           <td className="px-6 py-4 text-center">
+                            <Link href={`/seller/products/${product.id}/edit`} className="text-[#1B4D3E] font-bold mr-4 hover:underline">แก้ไข</Link>
                             <button 
                               onClick={() => handleDeleteProduct(product.id, product.name)}
                               disabled={deleteLoading === product.id}

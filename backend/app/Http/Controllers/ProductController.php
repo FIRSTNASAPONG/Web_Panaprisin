@@ -1,84 +1,93 @@
 <?php
+
 namespace App\Http\Controllers;
-use Illuminate\Http\Request;
+
 use App\Models\Product;
+use Illuminate\Http\Request;
+use Illuminate\Support\Facades\DB;
 
 class ProductController extends Controller
 {
-    // ดึงสินค้าทั้งหมด
-    public function index() {
-        return response()->json(Product::all());
+    public function index()
+    {
+        return response()->json(Product::where('is_active', true)->get());
     }
 
-    // เพิ่มสินค้า
+    public function mine(Request $request)
+    {
+        abort_unless(in_array($request->user()->role, ['seller', 'admin'], true), 403);
+        $query = Product::where('is_active', true);
+        if ($request->user()->role !== 'admin') {
+            $query->where('user_id', $request->user()->id);
+        }
+        return response()->json($query->latest('id')->get());
+    }
+
+    private function validateProduct(Request $request, bool $partial = false): array
+    {
+        $required = $partial ? 'sometimes|required' : 'required';
+        return $request->validate([
+            'name' => "$required|string|max:255",
+            'description' => 'nullable|string|max:10000',
+            'price' => "$required|numeric|min:0|max:99999999.99|decimal:0,2",
+            'category_id' => "$required|integer|exists:categories,id",
+            'stock_quantity' => "$required|integer|min:0|max:1000000",
+            'image' => 'nullable|image|mimes:jpeg,png,jpg,webp|max:2048',
+            'user_id' => 'prohibited',
+        ]);
+    }
+
+    private function authorizeProduct(Request $request, Product $product): void
+    {
+        abort_unless($request->user()->role === 'admin' ||
+            ($request->user()->role === 'seller' && (int) $product->user_id === (int) $request->user()->id), 403);
+    }
+
     public function store(Request $request)
     {
-        // ดักไว้ก่อนเลย ถ้าเป็น customer ห้ามเพิ่มสินค้า!
-        if ($request->user()->role === 'buyer') {
-            return response()->json(['message' => 'คุณไม่มีสิทธิ์เพิ่มสินค้า'], 403);
-        }
-        // 1. ตรวจสอบข้อมูล (Validation) ป้องกันแฮกเกอร์อัปไฟล์แปลกปลอม
-        $request->validate([
-            'name' => 'required|string|max:255',
-            'price' => 'required|numeric',
-            'category_id' => 'required|exists:categories,id',
-            'stock_quantity' => 'required|integer|min:0',
-            'image' => 'nullable|image|mimes:jpeg,png,jpg,webp|max:2048', // รับเฉพาะไฟล์รูป ขนาดไม่เกิน 2MB
-        ]);
-
-        $imagePath = null;
-        $user = $request->user(); // ดึงข้อมูล Seller ที่กำลังล็อกอิน
-
-        // 2. ถ้า Seller มีการอัปโหลดไฟล์รูปมาด้วย
+        abort_unless(in_array($request->user()->role, ['seller', 'admin'], true), 403);
+        $data = $this->validateProduct($request);
+        unset($data['image']);
+        $data['user_id'] = $request->user()->id;
         if ($request->hasFile('image')) {
-
-            $folderName = 'products/seller_' . $user->id;
-            
-            // เซฟไฟล์ลงโฟลเดอร์ public และเก็บที่อยู่ไฟล์ (Path) ไว้
-            $imagePath = $request->file('image')->store($folderName, 'public');
+            $data['image_url'] = $request->file('image')->store('products/seller_'.$request->user()->id, 'public');
         }
-
-        // 3. บันทึกข้อมูลลงฐานข้อมูล
-        $product = Product::create([
-            'user_id' => $user->id, // บังคับเซ็ตเจ้าของเป็นคนที่กำลังล็อกอิน
-            'category_id' => $request->category_id,
-            'name' => $request->name,
-            'price' => $request->price,
-            'stock_quantity' => $request->stock_quantity,
-            'image_url' => $imagePath, // บันทึก Path ของรูปลง Database
-        ]);
-
-        return response()->json([
-            'message' => 'เพิ่มสินค้าพร้อมรูปภาพสำเร็จ', 
-            'product' => $product
-        ], 201);
+        return response()->json(['message' => 'เพิ่มสินค้าสำเร็จ', 'product' => Product::create($data)], 201);
     }
 
-    public function show($id) {
-        $product = Product::find($id);
-        if ($product) {
-            return response()->json($product);
-        }
-        return response()->json(['message' => 'ไม่พบสินค้า'], 404);
-    }
-
-    public function destroy($id, Request $request)
+    public function update(Request $request, int $id)
     {
-        // 1. หาข้อมูลสินค้าขึ้นมาก่อน
-        $product = Product::findOrFail($id);
+        $product = Product::where('is_active', true)->findOrFail($id);
+        $this->authorizeProduct($request, $product);
+        $data = $this->validateProduct($request, true);
+        unset($data['image']);
+        if ($request->hasFile('image')) {
+            $data['image_url'] = $request->file('image')->store('products/seller_'.$product->user_id, 'public');
+        }
+        return DB::transaction(function () use ($product, $data) {
+            $locked = Product::whereKey($product->id)->lockForUpdate()->firstOrFail();
+            abort_unless($locked->is_active, 404);
+            // Preserve legacy line names before the first product rename after this upgrade.
+            \App\Models\OrderItem::where('product_id', $locked->id)->whereNull('product_name')
+                ->update(['product_name' => $locked->name]);
+            $locked->update($data);
+            return response()->json(['message' => 'บันทึกสินค้าสำเร็จ', 'product' => $locked]);
+        });
+    }
 
-        // 2. ดึงข้อมูลคนที่กำลังล็อกอินอยู่
-        $user = $request->user();
+    public function show(int $id)
+    {
+        return response()->json(Product::where('is_active', true)->findOrFail($id));
+    }
 
-        // 3. ตรวจสอบสิทธิ์ (Authorization)
-        // - ถ้าไม่ใช่ admin และ ไม่ใช่เจ้าของสินค้า -> เตะออก! (403)
-        if ($user->role !== 'admin' && (int)$product->user_id !== (int)$user->id) {
-        return response()->json(['message' => 'คุณไม่มีสิทธิ์ลบสินค้าของร้านอื่น!'], 403);
-}
-
-        // 4. ถ้าผ่านด่านมาได้ (เป็นแอดมิน หรือ เป็นเจ้าของจริงๆ) ก็สั่งลบได้เลย
-        $product->delete();
-
-        return response()->json(['message' => 'ลบสินค้าสำเร็จ']);
+    public function destroy(int $id, Request $request)
+    {
+        // Archive instead of cascading deletion of historical order lines.
+        return DB::transaction(function () use ($id, $request) {
+            $product = Product::whereKey($id)->lockForUpdate()->firstOrFail();
+            $this->authorizeProduct($request, $product);
+            $product->update(['is_active' => false]);
+            return response()->json(['message' => 'นำสินค้าออกจากหน้าร้านแล้ว ประวัติคำสั่งซื้อยังคงอยู่']);
+        });
     }
 }
