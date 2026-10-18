@@ -4,21 +4,22 @@ import Navbar from '../components/Navbar';
 import Footer from '../components/Footer';
 import ProductGrid from '../components/ProductGrid';
 
-async function getInitialProducts(): Promise<Product[]> {
-  const internalUrl = process.env.INTERNAL_API_URL || "http://nginx/api";
+async function getInitialProducts(): Promise<Product[] | null> {
+  const internalUrl = process.env.INTERNAL_API_URL || "http://webserver/api";
   try {
     const res = await fetch(`${internalUrl}/products`, {
       headers: { Accept: "application/json" },
       cache: "no-store",
+      signal: AbortSignal.timeout(2000),
     });
-    if (!res.ok) return [];
+    if (!res.ok) return null;
     const data: ProductListResponse = await res.json();
     if (Array.isArray(data)) return data;
     if (data && Array.isArray(data.data)) return data.data;
     if (data && Array.isArray(data.products)) return data.products;
-    return [];
+    return null;
   } catch {
-    return [];
+    return null;
   }
 }
 

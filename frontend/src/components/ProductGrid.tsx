@@ -61,10 +61,12 @@ const MOCK_CATEGORIES = [
 export default function ProductGrid({
   initialProducts,
 }: {
-  initialProducts: Product[];
+  initialProducts: Product[] | null;
 }) {
-  const [products, setProducts] = useState<Product[]>(initialProducts);
-  const [loading, setLoading] = useState(initialProducts.length === 0);
+  const [fallbackProducts, setProducts] = useState<Product[]>([]);
+  const [fallbackLoading, setLoading] = useState(initialProducts === null);
+  const products = initialProducts ?? fallbackProducts;
+  const loading = initialProducts === null && fallbackLoading;
   const [selectedCategory, setSelectedCategory] = useState<number | null>(null);
 
   const { addToCart } = useCart();
@@ -73,6 +75,11 @@ export default function ProductGrid({
   const searchQuery = (searchParams.get("search") || "").trim().toLowerCase();
 
   useEffect(() => {
+    // A successful server response (including []) needs no duplicate request.
+    if (initialProducts !== null) return;
+
+    const controller = new AbortController();
+    setLoading(true);
     fetch(`${process.env.NEXT_PUBLIC_API_URL || "/api"}/products`, {
       method: "GET",
       headers: {
@@ -80,21 +87,25 @@ export default function ProductGrid({
         "Cache-Control": "no-cache",
       },
       cache: "no-store",
+      signal: controller.signal,
     })
       .then(async (res) => {
         if (!res.ok) throw new Error("Failed to fetch");
         const data: ProductListResponse = await res.json();
+        if (controller.signal.aborted) return;
         if (Array.isArray(data)) setProducts(data);
         else if (data && Array.isArray(data.data)) setProducts(data.data);
         else if (data && Array.isArray(data.products)) setProducts(data.products);
       })
       .catch((err) => {
+        if (controller.signal.aborted) return;
         console.warn("Failed to fetch products:", err);
       })
       .finally(() => {
-        setLoading(false);
+        if (!controller.signal.aborted) setLoading(false);
       });
-  }, []);
+    return () => controller.abort();
+  }, [initialProducts]);
 
   // 🟢 แก้ไข: เช็ค category_id อย่างเดียว ป้องกัน TS2339 Error
   const filteredProducts = products.filter((product: Product) => {
