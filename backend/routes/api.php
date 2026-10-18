@@ -35,6 +35,10 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::get('/user', function (Request $request) {
         return $request->user(); // เช็คข้อมูล user ปัจจุบัน (Frontend)
     });
+    Route::get('/me', [\App\Http\Controllers\BuyerAccountController::class, 'overview']);
+    Route::get('/me/orders', [\App\Http\Controllers\BuyerAccountController::class, 'orders']);
+    Route::get('/me/orders/{id}', [\App\Http\Controllers\BuyerAccountController::class, 'order'])->whereNumber('id');
+    Route::patch('/user', [\App\Http\Controllers\BuyerAccountController::class, 'updateProfile']);
     //products
     Route::post('/products', [ProductController::class, 'store']);
     //cart

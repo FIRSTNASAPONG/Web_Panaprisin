@@ -67,6 +67,7 @@ class OrderController extends Controller
         $validated = $request->validate([
             'shipping_address' => 'required|string|max:2000',
             'payment_method' => 'required|in:promptpay,bank_transfer',
+            'idempotency_key' => 'required|uuid',
         ]);
         if ($request->user()->role !== 'buyer') {
             return response()->json([
@@ -75,6 +76,16 @@ class OrderController extends Controller
         }
         try {
             return DB::transaction(function () use ($request, $validated) {
+                // Serialize all checkouts for this buyer, including retries after cart clearing.
+                $request->user()->newQuery()->whereKey($request->user()->id)->lockForUpdate()->firstOrFail();
+                $fingerprint = hash('sha256', json_encode([$validated['shipping_address'], $validated['payment_method']]));
+                $existing = Order::where('user_id', $request->user()->id)
+                    ->where('idempotency_key', $validated['idempotency_key'])->first();
+                if ($existing) {
+                    abort_if($existing->checkout_fingerprint !== $fingerprint, 409, 'รหัสคำขอนี้ถูกใช้กับข้อมูลอื่นแล้ว');
+                    return response()->json(['order_id' => $existing->id, 'order_status' => $existing->order_status,
+                        'payment_status' => $existing->payment?->payment_status, 'total_amount' => $existing->total_amount]);
+                }
                 $cart = Cart::where('user_id', $request->user()->id)
                     ->lockForUpdate()
                     ->first();
@@ -104,7 +115,7 @@ class OrderController extends Controller
                 $lines = [];
                 foreach ($items as $item) {
                     $product = $products->get($item->product_id);
-                    if (!$product) {
+                    if (!$product || !$product->is_active) {
                         throw ValidationException::withMessages([
                             'cart' => 'มีสินค้าที่ไม่สามารถสั่งซื้อได้'
                         ]);
@@ -136,12 +147,15 @@ class OrderController extends Controller
                     'total_amount' => $total,
                     'order_status' => 'pending',
                     'shipping_address' => $validated['shipping_address'],
+                    'idempotency_key' => $validated['idempotency_key'],
+                    'checkout_fingerprint' => $fingerprint,
                 ]);
                 foreach ($lines as $line) {
                     $product = $line['product'];
                     OrderItem::create([
                         'order_id' => $order->id,
                         'product_id' => $product->id,
+                        'product_name' => $product->name,
                         'quantity' => $line['quantity'],
                         'unit_price' => $product->price,
                         'subtotal' => $line['subtotal'],

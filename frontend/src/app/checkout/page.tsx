@@ -1,7 +1,11 @@
 "use client";
 
+import axios from 'axios';
+import api from '@/lib/axios';
+import { errorMessage } from '@/lib/account';
+import type { User } from '@/types/api';
 import Image from "next/image";
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { useRouter } from 'next/navigation';
 import { useCart } from '../../context/CartContext';
 import Navbar from '../../components/Navbar';
@@ -12,34 +16,33 @@ export default function CheckoutPage() {
   const { cart, clearCart, fetchCartFromDB } = useCart();
   const router = useRouter();
 
-  const [email, setEmail] = useState('somchai@example.com'); 
-  const [phone, setPhone] = useState('080-000-0000');
-  const [fullName, setFullName] = useState('สมชาย ใจดี');
-  const [address, setAddress] = useState('99/9 หมู่ 2');
-  const [subDistrict, setSubDistrict] = useState('หนองแก๋ว');
-  const [district, setDistrict] = useState('หางดง');
-  const [province, setProvince] = useState('เชียงใหม่');
-  const [zipcode, setZipcode] = useState('50230');
+  const [email, setEmail] = useState(''); 
+  const [phone, setPhone] = useState('');
+  const [fullName, setFullName] = useState('');
+  const [address, setAddress] = useState('');
+  const [subDistrict, setSubDistrict] = useState('');
+  const [district, setDistrict] = useState('');
+  const [province, setProvince] = useState('');
+  const [zipcode, setZipcode] = useState('');
   const [paymentMethod, setPaymentMethod] = useState<'bank_transfer' | 'promptpay'>('bank_transfer');
   
-  const [slipImage, setSlipImage] = useState<File | null>(null);
-  const [slipPreview, setSlipPreview] = useState<string | null>(null);
+  const submitting = useRef(false);
+  const buyerId = useRef<number | null>(null);
+  const [error, setError] = useState('');
+  const [ready, setReady] = useState(false);
 
   const [isProcessing, setIsProcessing] = useState(false);
   const [isTermsAccepted, setIsTermsAccepted] = useState(false);
 
   useEffect(() => {
-    const userStr = localStorage.getItem('user');
-    if (userStr) {
-      try {
-        const user = JSON.parse(userStr);
-        if (user.email) setEmail(user.email);
-        if (user.name) setFullName(user.name);
-        else if (user.first_name) setFullName(`${user.first_name} ${user.last_name || ''}`.trim());
-      } catch (e) {
-        console.warn(e);
-      }
-    }
+    api.get<User>('/user').then(({ data: user }) => {
+      if (user.role !== 'buyer') { setError('เฉพาะผู้ซื้อเท่านั้นที่สั่งซื้อได้'); return; }
+      buyerId.current = user.id;
+      setEmail(user.email);
+      setFullName(`${user.first_name} ${user.last_name}`.trim());
+      setPhone(user.phone || '');
+      setReady(true);
+    }).catch((err: unknown) => setError(errorMessage(err)));
     fetchCartFromDB();
   }, [fetchCartFromDB]);
 
@@ -48,19 +51,9 @@ export default function CheckoutPage() {
   const discount = 0;
   const grandTotal = totalPrice + shippingFee - discount;
 
-  const handleSlipChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (file) {
-      setSlipImage(file);
-      const reader = new FileReader();
-      reader.onloadend = () => setSlipPreview(reader.result as string);
-      reader.readAsDataURL(file);
-    }
-  };
-
   const handlePlaceOrder = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (isProcessing) return;
+    if (submitting.current || !ready) return;
 
     if (cart.length === 0) {
       alert('ไม่มีสินค้าในตะกร้า');
@@ -79,43 +72,31 @@ export default function CheckoutPage() {
       return;
     }
 
+    submitting.current = true;
     setIsProcessing(true);
+    setError('');
 
     try {
-      const formData = new FormData();
       const fullAddress = `${fullName} (${phone}) ${address} ต.${subDistrict} อ.${district} จ.${province} ${zipcode}`;
-      
-      formData.append('shipping_address', fullAddress);
-      formData.append('payment_method', paymentMethod);
-      formData.append('email', email);
-      formData.append('phone', phone);
-      formData.append('customer_name', fullName);
-      if (slipImage) {
-        formData.append('slip_image', slipImage);
+      // Keep the exact request across uncertain network failures and page refreshes.
+      const storageKey = `checkout-request:${buyerId.current}`;
+      const stored = sessionStorage.getItem(storageKey);
+      const payload: { shipping_address: string; payment_method: string; idempotency_key: string } = stored ? JSON.parse(stored) : {
+        shipping_address: fullAddress, payment_method: paymentMethod, idempotency_key: crypto.randomUUID(),
+      };
+      sessionStorage.setItem(storageKey, JSON.stringify(payload));
+      const { data } = await api.post<{ order_id: number }>('/checkout', payload);
+      if (!Number.isInteger(data.order_id)) throw new Error('Invalid order response');
+      sessionStorage.removeItem(storageKey);
+      clearCart();
+      router.push(`/checkout/success?order_id=${data.order_id}`);
+    } catch (error: unknown) {
+      if (axios.isAxiosError(error) && error.response?.status === 422) {
+        sessionStorage.removeItem(`checkout-request:${buyerId.current}`);
       }
-
-      const apiUrl = process.env.NEXT_PUBLIC_API_URL || "/api";
-      const res = await fetch(`${apiUrl}/checkout`, {
-        method: 'POST',
-        headers: {
-          'Accept': 'application/json',
-          'Authorization': `Bearer ${token}`,
-        },
-        body: formData
-      });
-
-      const data = await res.json().catch(() => ({}));
-
-      if (res.ok) {
-        clearCart();
-        router.push('/checkout/success');
-      } else {
-        alert(data.message || 'เกิดข้อผิดพลาดในการส่งคำสั่งซื้อ');
-      }
-    } catch (error) {
-      console.warn('Order Error:', error);
-      alert('ไม่สามารถเชื่อมต่อกับเซิร์ฟเวอร์ได้');
+      setError(errorMessage(error));
     } finally {
+      submitting.current = false;
       setIsProcessing(false);
     }
   };
@@ -134,17 +115,19 @@ export default function CheckoutPage() {
             <span className="text-gray-900">ชำระเงิน</span>
           </div>
           
-          <h1 className="text-2xl font-bold text-[#1B4D3E] mb-6">ชำระเงินและแจ้งโอน</h1>
+          <h1 className="text-2xl font-bold text-[#1B4D3E] mb-6">ตรวจสอบและยืนยันคำสั่งซื้อ</h1>
 
           <div className="flex rounded-md overflow-hidden bg-white/60 mb-4 font-bold text-sm shadow-sm">
             <div className="flex-1 py-3 text-center text-gray-500 bg-gray-200">1 ตะกร้าสินค้า</div>
-            <div className="flex-1 py-3 text-center text-white bg-[#1B4D3E]">2 ชำระเงิน & แนบสลิป</div>
+            <div className="flex-1 py-3 text-center text-white bg-[#1B4D3E]">2 ข้อมูลคำสั่งซื้อ</div>
             <div className="flex-1 py-3 text-center text-gray-500 bg-gray-200">3 ยืนยันคำสั่งซื้อ</div>
           </div>
         </div>
       </div>
 
       <main className="container mx-auto px-4 max-w-6xl flex-grow pb-16">
+        {error && <p role="alert" className="bg-red-50 text-red-700 p-4 mb-4 whitespace-pre-line">{error}</p>}
+        {!ready && !error && <p role="status">กำลังโหลดข้อมูลบัญชี...</p>}
         {cart.length === 0 ? (
            <div className="bg-white rounded-md shadow-sm p-12 text-center border border-gray-100">
              <h2 className="text-xl font-bold text-gray-800 mb-4">ไม่มีสินค้าให้ชำระเงิน</h2>
@@ -160,14 +143,14 @@ export default function CheckoutPage() {
                   <div>
                     <label className="block text-sm font-bold text-gray-700 mb-2">อีเมล</label>
                     <input 
-                      type="email" value={email} onChange={(e) => setEmail(e.target.value)} required
+                      type="email" aria-label="อีเมล" value={email} onChange={(e) => setEmail(e.target.value)} required
                       className="w-full px-4 py-2.5 border border-gray-300 rounded-md focus:outline-none focus:border-[#1B4D3E] text-sm text-gray-800 bg-white"
                     />
                   </div>
                   <div>
                     <label className="block text-sm font-bold text-gray-700 mb-2">เบอร์โทรศัพท์</label>
                     <input 
-                      type="tel" value={phone} onChange={(e) => setPhone(e.target.value)} required
+                      type="tel" aria-label="เบอร์โทรศัพท์" value={phone} onChange={(e) => setPhone(e.target.value)} required
                       className="w-full px-4 py-2.5 border border-gray-300 rounded-md focus:outline-none focus:border-[#1B4D3E] text-sm text-gray-800 bg-white"
                     />
                   </div>
@@ -180,14 +163,14 @@ export default function CheckoutPage() {
                   <div>
                     <label className="block text-sm font-bold text-gray-700 mb-2">ชื่อ-นามสกุลผู้รับ</label>
                     <input 
-                      type="text" value={fullName} onChange={(e) => setFullName(e.target.value)} required
+                      type="text" aria-label="ชื่อผู้รับ" value={fullName} onChange={(e) => setFullName(e.target.value)} required
                       className="w-full px-4 py-2.5 border border-gray-300 rounded-md focus:outline-none focus:border-[#1B4D3E] text-sm text-gray-800 bg-white"
                     />
                   </div>
                   <div>
                     <label className="block text-sm font-bold text-gray-700 mb-2">บ้านเลขที่ / หมู่ / ถนน</label>
                     <input 
-                      type="text" value={address} onChange={(e) => setAddress(e.target.value)} required
+                      type="text" aria-label="ที่อยู่" value={address} onChange={(e) => setAddress(e.target.value)} required
                       className="w-full px-4 py-2.5 border border-gray-300 rounded-md focus:outline-none focus:border-[#1B4D3E] text-sm text-gray-800 bg-white"
                     />
                   </div>
@@ -195,14 +178,14 @@ export default function CheckoutPage() {
                     <div>
                       <label className="block text-sm font-bold text-gray-700 mb-2">ตำบล / แขวง</label>
                       <input 
-                        type="text" value={subDistrict} onChange={(e) => setSubDistrict(e.target.value)} required
+                        type="text" aria-label="ตำบล" value={subDistrict} onChange={(e) => setSubDistrict(e.target.value)} required
                         className="w-full px-4 py-2.5 border border-gray-300 rounded-md focus:outline-none focus:border-[#1B4D3E] text-sm text-gray-800 bg-white"
                       />
                     </div>
                     <div>
                       <label className="block text-sm font-bold text-gray-700 mb-2">อำเภอ / เขต</label>
                       <input 
-                        type="text" value={district} onChange={(e) => setDistrict(e.target.value)} required
+                        type="text" aria-label="อำเภอ" value={district} onChange={(e) => setDistrict(e.target.value)} required
                         className="w-full px-4 py-2.5 border border-gray-300 rounded-md focus:outline-none focus:border-[#1B4D3E] text-sm text-gray-800 bg-white"
                       />
                     </div>
@@ -210,18 +193,12 @@ export default function CheckoutPage() {
                   <div className="grid grid-cols-2 gap-5">
                     <div>
                       <label className="block text-sm font-bold text-gray-700 mb-2">จังหวัด</label>
-                      <select 
-                        value={province} onChange={(e) => setProvince(e.target.value)}
-                        className="w-full px-4 py-2.5 border border-gray-300 rounded-md focus:outline-none focus:border-[#1B4D3E] text-sm text-gray-800 bg-white"
-                      >
-                        <option value="เชียงใหม่">เชียงใหม่</option>
-                        <option value="กรุงเทพมหานคร">กรุงเทพมหานคร</option>
-                      </select>
+                      <input aria-label="จังหวัด" required value={province} onChange={(e) => setProvince(e.target.value)} className="w-full px-4 py-2.5 border border-gray-300 rounded-md text-gray-800" />
                     </div>
                     <div>
                       <label className="block text-sm font-bold text-gray-700 mb-2">รหัสไปรษณีย์</label>
                       <input 
-                        type="text" value={zipcode} onChange={(e) => setZipcode(e.target.value)} required
+                        type="text" aria-label="รหัสไปรษณีย์" value={zipcode} onChange={(e) => setZipcode(e.target.value)} required
                         className="w-full px-4 py-2.5 border border-gray-300 rounded-md focus:outline-none focus:border-[#1B4D3E] text-sm text-gray-800 bg-white"
                       />
                     </div>
@@ -230,7 +207,7 @@ export default function CheckoutPage() {
               </div>
 
               <div className="bg-white rounded-md shadow-sm border border-gray-100 p-8">
-                <h2 className="text-lg font-bold text-gray-900 mb-6 border-b pb-3">ช่องทางชำระเงินและแจ้งโอน</h2>
+                <h2 className="text-lg font-bold text-gray-900 mb-6 border-b pb-3">ช่องทางตรวจสอบและยืนยันคำสั่งซื้อ</h2>
 
                 <div className="grid grid-cols-2 gap-4 mb-6">
                   <label className={`border rounded-md p-4 flex items-center cursor-pointer ${paymentMethod === 'bank_transfer' ? 'border-[#1B4D3E] bg-green-50/50' : 'border-gray-200'}`}>
@@ -249,32 +226,11 @@ export default function CheckoutPage() {
                       onChange={() => setPaymentMethod('promptpay')}
                       className="text-[#1B4D3E] focus:ring-[#1B4D3E]"
                     />
-                    <span className="ml-2 text-sm font-bold text-gray-800">สแกน QR พร้อมเพย์</span>
+                    <span className="ml-2 text-sm font-bold text-gray-800">พร้อมเพย์</span>
                   </label>
                 </div>
                 
-                <div className="bg-green-50 border border-green-200 rounded-md p-6 mb-6 text-center">
-                  <p className="text-sm text-gray-600 mb-2 font-medium">โอนเงินเข้าบัญชี (พร้อมเพย์)</p>
-                  <div className="w-32 h-32 bg-white mx-auto mb-3 flex items-center justify-center border border-gray-300 shadow-sm">
-                    <span className="text-gray-400 text-xs">รูป QR Code</span>
-                  </div>
-                  <p className="font-bold text-gray-900">ธนาคารกสิกรไทย</p>
-                  <p className="text-xl font-mono text-[#1B4D3E] font-bold tracking-widest my-1">012-3-45678-9</p>
-                  <p className="text-sm text-gray-600">ชื่อบัญชี: ร้านพณาไพรสิน</p>
-                </div>
-
-                <div>
-                  <label className="block text-sm font-bold text-gray-900 mb-3">แนบหลักฐานการโอนเงิน (สลิป)</label>
-                  {slipPreview && (
-                    <div className="mb-4 w-48 h-auto border-2 border-gray-200 rounded-md overflow-hidden mx-auto shadow-sm">
-                      <Image unoptimized loading="eager" width={96} height={96} src={slipPreview} alt="Slip" className="w-full h-full object-cover" />
-                    </div>
-                  )}
-                  <label className="cursor-pointer bg-white border-2 border-dashed border-[#1B4D3E] text-[#1B4D3E] px-4 py-4 rounded-md font-bold hover:bg-green-50 transition text-sm flex flex-col justify-center items-center">
-                    คลิกเพื่ออัปโหลดสลิปโอนเงิน (JPG, PNG)
-                    <input type="file" className="hidden" accept="image/*" onChange={handleSlipChange} />
-                  </label>
-                </div>
+                <p className="bg-green-50 border border-green-200 rounded-md p-6 text-sm text-gray-700">หากการเชื่อมต่อขัดข้อง การลองอีกครั้งจะใช้ข้อมูลคำขอเดิมเพื่อป้องกันคำสั่งซื้อซ้ำ ระบบบันทึกคำสั่งซื้อในสถานะรอชำระเงิน ขณะนี้ยังไม่เปิดรับชำระเงินออนไลน์หรือแนบสลิป กรุณารอข้อมูลการชำระเงินที่ยืนยันจากร้านค้า</p>
               </div>
 
               <button type="button" onClick={() => router.push('/cart')} className="flex items-center gap-2 text-sm font-bold text-gray-700 bg-white border border-gray-300 px-6 py-3 rounded-md hover:bg-gray-50 w-max shadow-sm">
@@ -333,7 +289,7 @@ export default function CheckoutPage() {
 
                 <button 
                   type="submit"
-                  disabled={isProcessing}
+                  disabled={isProcessing || !ready}
                   className={`w-full py-4 rounded-md font-bold shadow-md transition uppercase tracking-wide text-sm ${
                     isProcessing
                       ? 'bg-gray-400 text-gray-200 cursor-not-allowed' 
