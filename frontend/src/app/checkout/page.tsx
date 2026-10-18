@@ -30,20 +30,24 @@ export default function CheckoutPage() {
   const buyerId = useRef<number | null>(null);
   const [error, setError] = useState('');
   const [ready, setReady] = useState(false);
+  const [hasPendingRequest, setHasPendingRequest] = useState(false);
 
   const [isProcessing, setIsProcessing] = useState(false);
   const [isTermsAccepted, setIsTermsAccepted] = useState(false);
 
   useEffect(() => {
-    api.get<User>('/user').then(({ data: user }) => {
+    const controller = new AbortController();
+    api.get<User>('/user', { signal: controller.signal }).then(({ data: user }) => {
       if (user.role !== 'buyer') { setError('เฉพาะผู้ซื้อเท่านั้นที่สั่งซื้อได้'); return; }
       buyerId.current = user.id;
+      setHasPendingRequest(!!sessionStorage.getItem(`checkout-request:${user.id}`));
       setEmail(user.email);
       setFullName(`${user.first_name} ${user.last_name}`.trim());
       setPhone(user.phone || '');
       setReady(true);
-    }).catch((err: unknown) => setError(errorMessage(err)));
+    }).catch((err: unknown) => { if (!controller.signal.aborted) setError(errorMessage(err)); });
     fetchCartFromDB();
+    return () => controller.abort();
   }, [fetchCartFromDB]);
 
   const totalPrice = cart.reduce((total, item) => total + (item.price * item.quantity), 0);
@@ -55,12 +59,12 @@ export default function CheckoutPage() {
     e.preventDefault();
     if (submitting.current || !ready) return;
 
-    if (cart.length === 0) {
+    if (cart.length === 0 && !hasPendingRequest) {
       alert('ไม่มีสินค้าในตะกร้า');
       return;
     }
     
-    if (!isTermsAccepted) {
+    if (!isTermsAccepted && !hasPendingRequest) {
       alert('กรุณายืนยันความถูกต้องของข้อมูลก่อนสั่งซื้อ');
       return;
     }
@@ -85,6 +89,7 @@ export default function CheckoutPage() {
         shipping_address: fullAddress, payment_method: paymentMethod, idempotency_key: crypto.randomUUID(),
       };
       sessionStorage.setItem(storageKey, JSON.stringify(payload));
+      setHasPendingRequest(true);
       const { data } = await api.post<{ order_id: number }>('/checkout', payload);
       if (!Number.isInteger(data.order_id)) throw new Error('Invalid order response');
       sessionStorage.removeItem(storageKey);
@@ -93,6 +98,7 @@ export default function CheckoutPage() {
     } catch (error: unknown) {
       if (axios.isAxiosError(error) && error.response?.status === 422) {
         sessionStorage.removeItem(`checkout-request:${buyerId.current}`);
+        setHasPendingRequest(false);
       }
       setError(errorMessage(error));
     } finally {
@@ -128,7 +134,8 @@ export default function CheckoutPage() {
       <main className="container mx-auto px-4 max-w-6xl flex-grow pb-16">
         {error && <p role="alert" className="bg-red-50 text-red-700 p-4 mb-4 whitespace-pre-line">{error}</p>}
         {!ready && !error && <p role="status">กำลังโหลดข้อมูลบัญชี...</p>}
-        {cart.length === 0 ? (
+        {hasPendingRequest && <div className="bg-white border border-gray-200 rounded-sm p-4 mb-4"><p>มีคำขอที่ยังไม่ได้รับการยืนยัน กดตรวจสอบเพื่อรับผลคำสั่งซื้อเดิม โดยใช้ที่อยู่และวิธีชำระเงินเดิม</p><button disabled={isProcessing || !ready} onClick={handlePlaceOrder} className="bg-[#1B4D3E] text-white px-4 py-2 mt-3 rounded-sm disabled:opacity-50">ตรวจสอบคำสั่งซื้อเดิม</button></div>}
+        {!ready ? null : cart.length === 0 ? (
            <div className="bg-white rounded-md shadow-sm p-12 text-center border border-gray-100">
              <h2 className="text-xl font-bold text-gray-800 mb-4">ไม่มีสินค้าให้ชำระเงิน</h2>
              <button onClick={() => router.push('/')} className="bg-[#1B4D3E] text-white px-8 py-2 rounded-md font-bold">กลับไปหน้าหลัก</button>
@@ -207,7 +214,7 @@ export default function CheckoutPage() {
               </div>
 
               <div className="bg-white rounded-md shadow-sm border border-gray-100 p-8">
-                <h2 className="text-lg font-bold text-gray-900 mb-6 border-b pb-3">ช่องทางตรวจสอบและยืนยันคำสั่งซื้อ</h2>
+                <h2 className="text-lg font-bold text-gray-900 mb-6 border-b pb-3">วิธีชำระเงินที่ต้องการ</h2>
 
                 <div className="grid grid-cols-2 gap-4 mb-6">
                   <label className={`border rounded-md p-4 flex items-center cursor-pointer ${paymentMethod === 'bank_transfer' ? 'border-[#1B4D3E] bg-green-50/50' : 'border-gray-200'}`}>
