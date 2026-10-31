@@ -2,6 +2,7 @@
 import assert from 'node:assert/strict';
 import { mkdir } from 'node:fs/promises';
 const { chromium } = await import(process.env.PLAYWRIGHT_MODULE || 'playwright');
+const output = process.env.EVIDENCE_DIR || '../docs/evidence';
 const api = 'http://127.0.0.1:8091/api';
 const base = 'http://127.0.0.1:3100';
 async function call(path, token, data, method = 'POST') {
@@ -26,7 +27,7 @@ async function login(account) {
   await page.goto(base + '/login');
   await page.evaluate(account => { localStorage.clear(); localStorage.setItem('token', account.access_token); localStorage.setItem('user', JSON.stringify(account.user)); }, account);
 }
-await mkdir('../docs/evidence', { recursive: true });
+await mkdir(output, { recursive: true });
 try {
   await page.goto(base + '/admin');
   await page.getByRole('alert').filter({ hasText: 'กรุณาเข้าสู่ระบบ' }).waitFor();
@@ -43,7 +44,7 @@ try {
   await page.getByRole('link', { name: product.name, exact: true }).waitFor();
   await page.setViewportSize({ width: 390, height: 844 });
   assert.ok(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth), 'wishlist mobile overflow');
-  await page.screenshot({ path: '../docs/evidence/requirements-wishlist-mobile.png', fullPage: true });
+  await page.screenshot({ path: `${output}/requirements-wishlist-mobile.png`, fullPage: true });
   await page.getByRole('button', { name: 'นำออกจากรายการโปรด' }).click();
   await page.getByText('ยังไม่มีสินค้าในรายการโปรด', { exact: false }).waitFor();
   await page.setViewportSize({ width: 1280, height: 900 });
@@ -77,10 +78,10 @@ try {
   await page.goto(base + `/product/${product.id}`);
   await page.getByTestId('product-rating').filter({ hasText: '4.0 / 5' }).waitFor();
   await page.getByText(`Verified purchase ${suffix}`, { exact: true }).waitFor();
-  await page.screenshot({ path: '../docs/evidence/requirements-approved-review.png', fullPage: true });
+  await page.screenshot({ path: `${output}/requirements-approved-review.png`, fullPage: true });
   await page.goto(base + '/admin');
   await page.getByRole('heading', { name: 'ภาพรวมระบบ' }).waitFor();
-  await page.screenshot({ path: '../docs/evidence/requirements-admin-dashboard.png', fullPage: true });
+  await page.screenshot({ path: `${output}/requirements-admin-dashboard.png`, fullPage: true });
   await page.goto(base + '/admin/users');
   const userCard = page.locator('article').filter({ hasText: buyer.user.email });
   await userCard.getByLabel('ชื่อ', { exact: true }).fill('Admin edited buyer');
@@ -95,7 +96,7 @@ try {
   await page.getByRole('status').filter({ hasText: 'บันทึกสำเร็จ' }).waitFor();
   await page.goto(base + '/admin/reports');
   await page.getByTestId('sales-revenue').waitFor();
-  await page.screenshot({ path: '../docs/evidence/requirements-admin-report.png', fullPage: true });
+  await page.screenshot({ path: `${output}/requirements-admin-report.png`, fullPage: true });
   await login(seller);
   await page.goto(base + '/admin');
   await page.getByRole('alert').filter({ hasText: 'ไม่มีสิทธิ์' }).waitFor();
@@ -104,7 +105,7 @@ try {
   assert.equal(Number((await call('/reports/sales', seller.access_token, null, 'GET')).total_revenue), 251);
   await page.setViewportSize({ width: 390, height: 844 });
   assert.ok(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth), 'seller report mobile overflow');
-  await page.screenshot({ path: '../docs/evidence/requirements-seller-report-mobile.png', fullPage: true });
+  await page.screenshot({ path: `${output}/requirements-seller-report-mobile.png`, fullPage: true });
   assert.deepEqual(errors, []);
   console.log('PASS: real PostgreSQL Buyer wishlist/review, Admin payment/order/moderation/user/product/report, Seller isolated report, role guards, mobile layouts; no page errors.');
-} catch (error) { await page.screenshot({ path: '../docs/evidence/requirements-browser-failure.png', fullPage: true }); console.error('Failure at', page.url(), await page.locator('body').innerText()); throw error; } finally { await browser.close(); }
+} catch (error) { await page.screenshot({ path: `${output}/requirements-browser-failure.png`, fullPage: true }); console.error('Failure at', page.url(), await page.locator('body').innerText()); throw error; } finally { await browser.close(); }

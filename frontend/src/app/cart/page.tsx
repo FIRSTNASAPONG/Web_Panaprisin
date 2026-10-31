@@ -10,7 +10,7 @@ import { getProductImageUrl } from "@/lib/image";
 import Link from "next/link";
 
 export default function CartPage() {
-  const { cart, removeFromCart, updateQuantity, fetchCartFromDB } = useCart();
+  const { cart, cartLoading, cartError, cartBusy, removeFromCart, updateQuantity, fetchCartFromDB } = useCart();
   const router = useRouter();
 
   useEffect(() => {
@@ -40,7 +40,8 @@ export default function CartPage() {
           ตะกร้าสินค้าของฉัน
         </h1>
 
-        {cart.length === 0 ? (
+        {cartError && <div role="alert" className="bg-white border-l-4 border-red-600 p-4 mb-4">{cartError} <button className="underline" onClick={fetchCartFromDB}>ลองอีกครั้ง</button></div>}
+        {cartLoading ? <p role="status" className="p-6">กำลังโหลดตะกร้า...</p> : cart.length === 0 && cartError ? null : cart.length === 0 ? (
           <div className="bg-white rounded-sm shadow-sm p-12 flex flex-col items-center justify-center text-gray-500">
             <svg xmlns="http://www.w3.org/2000/svg" width="64" height="64" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1" strokeLinecap="round" strokeLinejoin="round" className="mb-4 text-gray-300"><circle cx="8" cy="21" r="1"/><circle cx="19" cy="21" r="1"/><path d="M2.05 2.05h2l2.66 12.42a2 2 0 0 0 2 1.58h9.78a2 2 0 0 0 1.95-1.57l1.65-7.43H5.12"/></svg>
             <p className="text-lg font-medium text-gray-700 mb-4">ตะกร้าของคุณยังว่างเปล่า</p>
@@ -80,6 +81,7 @@ export default function CartPage() {
                           <h3 className="text-sm font-medium text-gray-900 line-clamp-2">{item.name}</h3>
                           <button
                             type="button"
+                            disabled={cartBusy}
                             onClick={() => removeFromCart(item.id)}
                             className="text-xs text-red-500 font-medium text-left hover:underline w-max"
                           >
@@ -97,6 +99,7 @@ export default function CartPage() {
                         <div className="flex border border-gray-300 rounded-sm h-8">
                           <button
                             type="button"
+                            disabled={cartBusy}
                             onClick={() => updateQuantity(item.id, Math.max(1, item.quantity - 1))}
                             className="w-7 flex items-center justify-center hover:bg-gray-100 border-r border-gray-300 text-gray-600 transition"
                           >
@@ -104,12 +107,14 @@ export default function CartPage() {
                           </button>
                           <input
                             type="text"
+                            aria-label={`จำนวน ${item.name}`}
                             value={item.quantity}
                             readOnly
                             className="w-8 text-center text-sm focus:outline-none bg-white text-gray-900"
                           />
                           <button
                             type="button"
+                            disabled={cartBusy}
                             onClick={() => updateQuantity(item.id, item.quantity + 1)}
                             className="w-7 flex items-center justify-center hover:bg-gray-100 border-l border-gray-300 text-gray-600 transition"
                           >
@@ -154,6 +159,7 @@ export default function CartPage() {
 
                 <button
                   type="button"
+                  disabled={cartBusy || cartLoading || !!cartError}
                   onClick={handleProceedToCheckout}
                   className="w-full bg-[#1B4D3E] text-white py-3 rounded-sm font-bold hover:bg-[#143a2f] shadow-sm transition uppercase text-sm"
                 >

@@ -5,7 +5,7 @@ import { mkdir } from 'node:fs/promises';
 const { chromium } = await import(process.env.PLAYWRIGHT_MODULE || 'playwright');
 const api = 'http://127.0.0.1:8091/api';
 const base = 'http://127.0.0.1:3100';
-const output = '../docs/evidence';
+const output = process.env.EVIDENCE_DIR || '../docs/evidence';
 await mkdir(output, { recursive: true });
 async function call(path, token, data, method = 'POST') {
   const res = await fetch(api + path, { method, headers: { Accept: 'application/json', 'Content-Type': 'application/json', ...(token ? { Authorization: `Bearer ${token}` } : {}) }, ...(data ? { body: JSON.stringify(data) } : {}) });

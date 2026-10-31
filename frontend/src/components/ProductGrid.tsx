@@ -8,7 +8,7 @@ import type { Product, ProductListResponse } from "@/types/api";
 import { useCart } from "../context/CartContext";
 import { getProductImageUrl } from "@/lib/image";
 
-const MOCK_CATEGORIES = [
+const CATEGORY_PRESENTATION = [
   {
     id: 1,
     name: "พระเครื่อง",
@@ -67,6 +67,19 @@ export default function ProductGrid({
   const [fallbackLoading, setLoading] = useState(initialProducts === null);
   const products = initialProducts ?? fallbackProducts;
   const loading = initialProducts === null && fallbackLoading;
+  const [categories, setCategories] = useState<{ id: number; name: string }[]>([]);
+  const [categoryError, setCategoryError] = useState('');
+  const [error, setError] = useState('');
+  const [attempt, setAttempt] = useState(0);
+  useEffect(() => {
+    const controller = new AbortController();
+    setCategoryError('');
+    fetch(`${process.env.NEXT_PUBLIC_API_URL || '/api'}/categories`, { signal: controller.signal })
+      .then(async response => { if (!response.ok) throw new Error(); return response.json(); })
+      .then(data => { if (!controller.signal.aborted) setCategories(data); })
+      .catch(() => { if (!controller.signal.aborted) setCategoryError('โหลดหมวดหมู่ไม่สำเร็จ'); });
+    return () => controller.abort();
+  }, [attempt]);
   const [selectedCategory, setSelectedCategory] = useState<number | null>(null);
 
   const { addToCart } = useCart();
@@ -79,7 +92,7 @@ export default function ProductGrid({
     if (initialProducts !== null) return;
 
     const controller = new AbortController();
-    setLoading(true);
+    setLoading(true); setError('');
     fetch(`${process.env.NEXT_PUBLIC_API_URL || "/api"}/products`, {
       method: "GET",
       headers: {
@@ -99,13 +112,14 @@ export default function ProductGrid({
       })
       .catch((err) => {
         if (controller.signal.aborted) return;
-        console.warn("Failed to fetch products:", err);
+        console.warn('Failed to fetch products:', err);
+        setError('โหลดสินค้าไม่สำเร็จ กรุณาลองอีกครั้ง');
       })
       .finally(() => {
         if (!controller.signal.aborted) setLoading(false);
       });
     return () => controller.abort();
-  }, [initialProducts]);
+  }, [initialProducts, attempt]);
 
   // 🟢 แก้ไข: เช็ค category_id อย่างเดียว ป้องกัน TS2339 Error
   const filteredProducts = products.filter((product: Product) => {
@@ -123,7 +137,7 @@ export default function ProductGrid({
     return matchesCategory && matchesSearch;
   });
 
-  const activeCategoryName = MOCK_CATEGORIES.find(
+  const activeCategoryName = categories.find(
     (c) => c.id === selectedCategory
   )?.name;
 
@@ -145,8 +159,9 @@ export default function ProductGrid({
             </button>
           )}
         </div>
+        {categoryError && <p role="alert">{categoryError} <button className="underline" onClick={() => setAttempt(value => value + 1)}>ลองอีกครั้ง</button></p>}
         <div className="grid grid-cols-4 md:grid-cols-8 gap-4">
-          {MOCK_CATEGORIES.map((cat) => {
+          {categories.map((cat) => {
             const isSelected = selectedCategory === cat.id;
             return (
               <button
@@ -166,7 +181,7 @@ export default function ProductGrid({
                     isSelected ? "bg-white shadow-sm" : "bg-gray-50"
                   }`}
                 >
-                  {cat.icon}
+                  {(CATEGORY_PRESENTATION.find(item => item.name === cat.name) || CATEGORY_PRESENTATION[3]).icon}
                 </div>
                 <span
                   className={`text-sm text-center line-clamp-2 ${
@@ -209,7 +224,7 @@ export default function ProductGrid({
       </div>
 
       {/* Products Grid */}
-      {loading ? (
+      {error ? <div role="alert" className="bg-white p-6">{error} <button className="underline" onClick={() => setAttempt(value => value + 1)}>ลองอีกครั้ง</button></div> : loading ? (
         <div className="bg-white p-12 text-center text-gray-500 font-medium rounded-sm shadow-sm">
           กำลังโหลดรายการสินค้า...
         </div>
