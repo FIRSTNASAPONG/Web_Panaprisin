@@ -76,7 +76,7 @@ export interface ApiError {
 
 // Preserve the response envelopes already supported by the frontend.
 export type ProductListResponse = Product[] | { data?: Product[]; products?: Product[] };
-export type OrderListResponse = Order[] | { data?: Order[] };
+export type OrderListResponse = Order[] | { data?: Order[]; current_page?: number; last_page?: number; total?: number };
 
 export interface Payment {
   paid_at?: string | null;

@@ -19,41 +19,27 @@ export default function ProductDetailPage() {
 
   const [product, setProduct] = useState<Product | null>(null);
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState('');
+  const [attempt, setAttempt] = useState(0);
   const [quantity, setQuantity] = useState(1);
   const [isAdding, setIsAdding] = useState(false);
   const { addToCart } = useCart();
 
   useEffect(() => {
-    if (productId) {
-      const apiUrl = process.env.NEXT_PUBLIC_API_URL || "/api";
-
-      fetch(`${apiUrl}/products/${productId}`, {
-        headers: { 'Accept': 'application/json' },
-        cache: 'no-store'
-      })
-        .then(async (res) => {
-          if (!res.ok) {
-            setProduct(null);
-            return;
-          }
-          const data = await res.json();
-          if (data && data.data) {
-            setProduct(data.data);
-          } else if (data && data.id) {
-            setProduct(data);
-          } else {
-            setProduct(null);
-          }
-        })
-        .catch((err) => {
-          console.warn('Failed to fetch product:', err);
-          setProduct(null);
-        })
-        .finally(() => {
-          setLoading(false);
-        });
-    }
-  }, [productId]);
+    const controller = new AbortController();
+    setProduct(null); setError(''); setLoading(true);
+    if (!Number.isSafeInteger(productId) || productId < 1) { setLoading(false); return; }
+    fetch(`${process.env.NEXT_PUBLIC_API_URL || '/api'}/products/${productId}`, {
+      headers: { Accept: 'application/json' }, cache: 'no-store', signal: controller.signal,
+    }).then(async res => {
+      if (res.status === 404) return;
+      if (!res.ok) throw new Error('โหลดข้อมูลสินค้าไม่สำเร็จ');
+      const data = await res.json();
+      if (!controller.signal.aborted) setProduct(data.data || data);
+    }).catch(() => { if (!controller.signal.aborted) setError('ไม่สามารถเชื่อมต่อเซิร์ฟเวอร์ กรุณาลองอีกครั้ง'); })
+      .finally(() => { if (!controller.signal.aborted) setLoading(false); });
+    return () => controller.abort();
+  }, [productId, attempt]);
 
   const maxStock = product ? Number(product.stock_quantity ?? product.stock ?? 0) : 0;
   const isOutOfStock = maxStock <= 0;
@@ -108,7 +94,7 @@ export default function ProductDetailPage() {
       <div className="min-h-screen bg-[#f5f5f5] font-sans flex flex-col">
         <Navbar />
         <main className="flex-grow flex flex-col items-center justify-center gap-4">
-          <div className="text-gray-600 font-bold text-lg">ไม่พบข้อมูลสินค้าที่ค้นหา</div>
+          {error ? <div role="alert">{error} <button className="underline" onClick={() => setAttempt(v => v + 1)}>ลองอีกครั้ง</button></div> : <div className="text-gray-600 font-bold text-lg">ไม่พบข้อมูลสินค้าที่ค้นหา</div>}
           <button onClick={() => router.push('/')} className="bg-[#1B4D3E] text-white px-6 py-2 rounded-sm font-bold text-sm">
             กลับไปหน้าแรก
           </button>
@@ -173,6 +159,7 @@ export default function ProductDetailPage() {
                     <button
                       type="button"
                       disabled={isOutOfStock || quantity <= 1}
+                      aria-label="ลดจำนวน"
                       onClick={handleDecrease}
                       className="w-8 flex items-center justify-center hover:bg-gray-100 border-r border-gray-300 text-gray-600 transition disabled:opacity-40"
                     >
@@ -180,6 +167,7 @@ export default function ProductDetailPage() {
                     </button>
                     <input
                       type="text"
+                      aria-label="จำนวนสินค้า"
                       value={isOutOfStock ? 0 : quantity}
                       readOnly
                       className="w-12 text-center text-gray-900 focus:outline-none bg-white"
@@ -187,6 +175,7 @@ export default function ProductDetailPage() {
                     <button
                       type="button"
                       disabled={isOutOfStock || quantity >= maxStock}
+                      aria-label="เพิ่มจำนวน"
                       onClick={handleIncrease}
                       className="w-8 flex items-center justify-center hover:bg-gray-100 border-l border-gray-300 text-gray-600 transition disabled:opacity-40"
                     >
