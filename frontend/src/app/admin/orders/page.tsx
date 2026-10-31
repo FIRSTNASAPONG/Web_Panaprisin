@@ -5,6 +5,7 @@ import type { BuyerOrder } from '@/types/api';
 export default function OrdersPage() {
   return <AdminList<BuyerOrder> path="/admin/orders" title="จัดการคำสั่งซื้อ" render={(order, run, busy) => <>
     <h2 className="font-bold">คำสั่งซื้อ #{order.id} — {order.order_status}</h2><p>{order.user?.first_name} — ฿{Number(order.total_amount).toLocaleString()} — Payment: {order.payment?.payment_status || 'ไม่มี'}</p><p className="whitespace-pre-wrap">{order.shipping_address}</p>
+    {order.payment?.verified_by && <p className="text-sm text-gray-600">ตรวจรับเงินโดย Admin #{order.payment.verified_by} — อ้างอิง {order.payment.verification_reference} — {order.payment.paid_at ? new Date(order.payment.paid_at).toLocaleString('th-TH') : ''}</p>}
     <ul className="my-2">{order.items.map((item, index) => <li key={index}>{item.product_name || item.product?.name} × {item.quantity} — ฿{item.subtotal}</li>)}</ul>
     {order.order_status === 'pending' && <><form className="my-3 space-y-2" onSubmit={e => { e.preventDefault(); const form = new FormData(e.currentTarget); void run(() => api.post(`/admin/orders/${order.id}/confirm-payment`, { confirmed: form.get('confirmed') === 'on', reference: form.get('reference') })); }}>
       <label className="block">หลักฐานอ้างอิงการรับเงิน<input name="reference" required maxLength={255} className="border rounded p-2 ml-2" /></label>

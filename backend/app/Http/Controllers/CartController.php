@@ -37,6 +37,7 @@ class CartController extends Controller
             ], 403);
         }
         return DB::transaction(function () use ($request, $data) {
+            $request->user()->newQuery()->whereKey($request->user()->id)->lockForUpdate()->firstOrFail();
             $cart = Cart::firstOrCreate([
                 'user_id' => $request->user()->id
             ]);
@@ -72,39 +73,32 @@ class CartController extends Controller
             ], 201);
         }, 3);
     }
-    // 3. แก้ไขจำนวนสินค้าในตะกร้า (เช่น กดปุ่ม + / -)
-    public function updateQuantity(Request $request, $itemId)
+    // All mutations share checkout's user -> cart -> product lock order.
+    public function updateQuantity(Request $request, int $itemId)
     {
-        $request->validate([
-            'quantity' => 'required|integer|min:1'
-        ]);
-
-        $cartItem = CartItem::findOrFail($itemId);
-
-        // เช็คความปลอดภัย: ตะกร้านี้เป็นของคนที่ล็อกอินอยู่จริงๆ ใช่ไหม?
-        if ($cartItem->cart->user_id !== $request->user()->id) {
-            return response()->json(['message' => 'ไม่อนุญาต'], 403);
-        }
-
-        if (!$cartItem->product?->is_active || $request->integer('quantity') > $cartItem->product->stock_quantity) {
-            throw ValidationException::withMessages(['quantity' => 'สินค้าไม่พร้อมขายหรือสต็อกไม่เพียงพอ']);
-        }
-        $cartItem->update(['quantity' => $request->quantity]);
-
-        return response()->json(['message' => 'อัปเดตจำนวนสำเร็จ']);
+        abort_unless($request->user()->role === 'buyer', 403);
+        $data = $request->validate(['quantity' => 'required|integer|min:1|max:1000000']);
+        return DB::transaction(function () use ($request, $itemId, $data) {
+            $request->user()->newQuery()->whereKey($request->user()->id)->lockForUpdate()->firstOrFail();
+            $cart = Cart::where('user_id', $request->user()->id)->lockForUpdate()->firstOrFail();
+            $item = $cart->items()->findOrFail($itemId);
+            $product = Product::whereKey($item->product_id)->lockForUpdate()->firstOrFail();
+            if (!$product->is_active || $data['quantity'] > $product->stock_quantity) {
+                throw ValidationException::withMessages(['quantity' => 'สินค้าไม่พร้อมขายหรือสต็อกไม่เพียงพอ']);
+            }
+            $item->update($data);
+            return response()->json(['message' => 'อัปเดตจำนวนสำเร็จ']);
+        }, 3);
     }
 
-    // 4. ลบสินค้าออกจากตะกร้า
-    public function removeItem(Request $request, $itemId)
+    public function removeItem(Request $request, int $itemId)
     {
-        $cartItem = CartItem::findOrFail($itemId);
-
-        if ($cartItem->cart->user_id !== $request->user()->id) {
-            return response()->json(['message' => 'ไม่อนุญาต'], 403);
-        }
-
-        $cartItem->delete();
-
-        return response()->json(['message' => 'ลบสินค้าออกจากตะกร้าสำเร็จ']);
+        abort_unless($request->user()->role === 'buyer', 403);
+        return DB::transaction(function () use ($request, $itemId) {
+            $request->user()->newQuery()->whereKey($request->user()->id)->lockForUpdate()->firstOrFail();
+            $cart = Cart::where('user_id', $request->user()->id)->lockForUpdate()->firstOrFail();
+            $cart->items()->findOrFail($itemId)->delete();
+            return response()->json(['message' => 'ลบสินค้าออกจากตะกร้าสำเร็จ']);
+        }, 3);
     }
 }

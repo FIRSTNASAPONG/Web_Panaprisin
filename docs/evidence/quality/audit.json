@@ -1,0 +1,486 @@
+{
+  "results": [
+    {
+      "role": "buyer",
+      "path": "/",
+      "viewport": 1280,
+      "status": 200,
+      "overflow": false,
+      "width": 1280,
+      "unnamedInputs": [],
+      "unnamedButtons": 0
+    },
+    {
+      "role": "buyer",
+      "path": "/login",
+      "viewport": 1280,
+      "status": 200,
+      "overflow": false,
+      "width": 1280,
+      "unnamedInputs": [],
+      "unnamedButtons": 0
+    },
+    {
+      "role": "buyer",
+      "path": "/signup",
+      "viewport": 1280,
+      "status": 200,
+      "overflow": false,
+      "width": 1280,
+      "unnamedInputs": [],
+      "unnamedButtons": 0
+    },
+    {
+      "role": "buyer",
+      "path": "/product/15",
+      "viewport": 1280,
+      "status": 200,
+      "overflow": false,
+      "width": 1280,
+      "unnamedInputs": [],
+      "unnamedButtons": 0
+    },
+    {
+      "role": "buyer",
+      "path": "/cart",
+      "viewport": 1280,
+      "status": 200,
+      "overflow": false,
+      "width": 1280,
+      "unnamedInputs": [],
+      "unnamedButtons": 0
+    },
+    {
+      "role": "buyer",
+      "path": "/wishlist",
+      "viewport": 1280,
+      "status": 200,
+      "overflow": false,
+      "width": 1280,
+      "unnamedInputs": [],
+      "unnamedButtons": 0
+    },
+    {
+      "role": "buyer",
+      "path": "/account",
+      "viewport": 1280,
+      "status": 200,
+      "overflow": false,
+      "width": 1280,
+      "unnamedInputs": [],
+      "unnamedButtons": 0
+    },
+    {
+      "role": "buyer",
+      "path": "/account/profile",
+      "viewport": 1280,
+      "status": 200,
+      "overflow": false,
+      "width": 1280,
+      "unnamedInputs": [],
+      "unnamedButtons": 0
+    },
+    {
+      "role": "buyer",
+      "path": "/account/orders",
+      "viewport": 1280,
+      "status": 200,
+      "overflow": false,
+      "width": 1280,
+      "unnamedInputs": [],
+      "unnamedButtons": 0
+    },
+    {
+      "role": "buyer",
+      "path": "/account/orders/30",
+      "viewport": 1280,
+      "status": 200,
+      "overflow": false,
+      "width": 1280,
+      "unnamedInputs": [],
+      "unnamedButtons": 0
+    },
+    {
+      "role": "buyer",
+      "path": "/checkout",
+      "viewport": 1280,
+      "status": 200,
+      "overflow": false,
+      "width": 1280,
+      "unnamedInputs": [],
+      "unnamedButtons": 0
+    },
+    {
+      "role": "buyer",
+      "path": "/checkout/success?order_id=30",
+      "viewport": 1280,
+      "status": 200,
+      "overflow": false,
+      "width": 1280,
+      "unnamedInputs": [],
+      "unnamedButtons": 0
+    },
+    {
+      "role": "buyer",
+      "path": "/",
+      "viewport": 390,
+      "status": 200,
+      "overflow": false,
+      "width": 390,
+      "unnamedInputs": [],
+      "unnamedButtons": 0
+    },
+    {
+      "role": "buyer",
+      "path": "/login",
+      "viewport": 390,
+      "status": 200,
+      "overflow": false,
+      "width": 390,
+      "unnamedInputs": [],
+      "unnamedButtons": 0
+    },
+    {
+      "role": "buyer",
+      "path": "/signup",
+      "viewport": 390,
+      "status": 200,
+      "overflow": false,
+      "width": 390,
+      "unnamedInputs": [],
+      "unnamedButtons": 0
+    },
+    {
+      "role": "buyer",
+      "path": "/product/15",
+      "viewport": 390,
+      "status": 200,
+      "overflow": false,
+      "width": 390,
+      "unnamedInputs": [],
+      "unnamedButtons": 0
+    },
+    {
+      "role": "buyer",
+      "path": "/cart",
+      "viewport": 390,
+      "status": 200,
+      "overflow": false,
+      "width": 390,
+      "unnamedInputs": [],
+      "unnamedButtons": 0
+    },
+    {
+      "role": "buyer",
+      "path": "/wishlist",
+      "viewport": 390,
+      "status": 200,
+      "overflow": false,
+      "width": 390,
+      "unnamedInputs": [],
+      "unnamedButtons": 0
+    },
+    {
+      "role": "buyer",
+      "path": "/account",
+      "viewport": 390,
+      "status": 200,
+      "overflow": false,
+      "width": 390,
+      "unnamedInputs": [],
+      "unnamedButtons": 0
+    },
+    {
+      "role": "buyer",
+      "path": "/account/profile",
+      "viewport": 390,
+      "status": 200,
+      "overflow": false,
+      "width": 390,
+      "unnamedInputs": [],
+      "unnamedButtons": 0
+    },
+    {
+      "role": "buyer",
+      "path": "/account/orders",
+      "viewport": 390,
+      "status": 200,
+      "overflow": false,
+      "width": 390,
+      "unnamedInputs": [],
+      "unnamedButtons": 0
+    },
+    {
+      "role": "buyer",
+      "path": "/account/orders/30",
+      "viewport": 390,
+      "status": 200,
+      "overflow": false,
+      "width": 390,
+      "unnamedInputs": [],
+      "unnamedButtons": 0
+    },
+    {
+      "role": "buyer",
+      "path": "/checkout",
+      "viewport": 390,
+      "status": 200,
+      "overflow": false,
+      "width": 390,
+      "unnamedInputs": [],
+      "unnamedButtons": 0
+    },
+    {
+      "role": "buyer",
+      "path": "/checkout/success?order_id=30",
+      "viewport": 390,
+      "status": 200,
+      "overflow": false,
+      "width": 390,
+      "unnamedInputs": [],
+      "unnamedButtons": 0
+    },
+    {
+      "role": "seller",
+      "path": "/seller",
+      "viewport": 1280,
+      "status": 200,
+      "overflow": false,
+      "width": 1280,
+      "unnamedInputs": [],
+      "unnamedButtons": 0
+    },
+    {
+      "role": "seller",
+      "path": "/seller/products",
+      "viewport": 1280,
+      "status": 200,
+      "overflow": false,
+      "width": 1280,
+      "unnamedInputs": [],
+      "unnamedButtons": 0
+    },
+    {
+      "role": "seller",
+      "path": "/seller/add-product",
+      "viewport": 1280,
+      "status": 200,
+      "overflow": false,
+      "width": 1280,
+      "unnamedInputs": [],
+      "unnamedButtons": 0
+    },
+    {
+      "role": "seller",
+      "path": "/seller/products/15/edit",
+      "viewport": 1280,
+      "status": 200,
+      "overflow": false,
+      "width": 1280,
+      "unnamedInputs": [],
+      "unnamedButtons": 0
+    },
+    {
+      "role": "seller",
+      "path": "/seller/orders",
+      "viewport": 1280,
+      "status": 200,
+      "overflow": false,
+      "width": 1280,
+      "unnamedInputs": [],
+      "unnamedButtons": 0
+    },
+    {
+      "role": "seller",
+      "path": "/seller/reports",
+      "viewport": 1280,
+      "status": 200,
+      "overflow": false,
+      "width": 1280,
+      "unnamedInputs": [],
+      "unnamedButtons": 0
+    },
+    {
+      "role": "seller",
+      "path": "/seller",
+      "viewport": 390,
+      "status": 200,
+      "overflow": false,
+      "width": 390,
+      "unnamedInputs": [],
+      "unnamedButtons": 0
+    },
+    {
+      "role": "seller",
+      "path": "/seller/products",
+      "viewport": 390,
+      "status": 200,
+      "overflow": false,
+      "width": 390,
+      "unnamedInputs": [],
+      "unnamedButtons": 0
+    },
+    {
+      "role": "seller",
+      "path": "/seller/add-product",
+      "viewport": 390,
+      "status": 200,
+      "overflow": false,
+      "width": 390,
+      "unnamedInputs": [],
+      "unnamedButtons": 0
+    },
+    {
+      "role": "seller",
+      "path": "/seller/products/15/edit",
+      "viewport": 390,
+      "status": 200,
+      "overflow": false,
+      "width": 390,
+      "unnamedInputs": [],
+      "unnamedButtons": 0
+    },
+    {
+      "role": "seller",
+      "path": "/seller/orders",
+      "viewport": 390,
+      "status": 200,
+      "overflow": false,
+      "width": 390,
+      "unnamedInputs": [],
+      "unnamedButtons": 0
+    },
+    {
+      "role": "seller",
+      "path": "/seller/reports",
+      "viewport": 390,
+      "status": 200,
+      "overflow": false,
+      "width": 390,
+      "unnamedInputs": [],
+      "unnamedButtons": 0
+    },
+    {
+      "role": "admin",
+      "path": "/admin",
+      "viewport": 1280,
+      "status": 200,
+      "overflow": false,
+      "width": 1280,
+      "unnamedInputs": [],
+      "unnamedButtons": 0
+    },
+    {
+      "role": "admin",
+      "path": "/admin/users",
+      "viewport": 1280,
+      "status": 200,
+      "overflow": false,
+      "width": 1280,
+      "unnamedInputs": [],
+      "unnamedButtons": 0
+    },
+    {
+      "role": "admin",
+      "path": "/admin/products",
+      "viewport": 1280,
+      "status": 200,
+      "overflow": false,
+      "width": 1280,
+      "unnamedInputs": [],
+      "unnamedButtons": 0
+    },
+    {
+      "role": "admin",
+      "path": "/admin/orders",
+      "viewport": 1280,
+      "status": 200,
+      "overflow": false,
+      "width": 1280,
+      "unnamedInputs": [],
+      "unnamedButtons": 0
+    },
+    {
+      "role": "admin",
+      "path": "/admin/reviews",
+      "viewport": 1280,
+      "status": 200,
+      "overflow": false,
+      "width": 1280,
+      "unnamedInputs": [],
+      "unnamedButtons": 0
+    },
+    {
+      "role": "admin",
+      "path": "/admin/reports",
+      "viewport": 1280,
+      "status": 200,
+      "overflow": false,
+      "width": 1280,
+      "unnamedInputs": [],
+      "unnamedButtons": 0
+    },
+    {
+      "role": "admin",
+      "path": "/admin",
+      "viewport": 390,
+      "status": 200,
+      "overflow": false,
+      "width": 390,
+      "unnamedInputs": [],
+      "unnamedButtons": 0
+    },
+    {
+      "role": "admin",
+      "path": "/admin/users",
+      "viewport": 390,
+      "status": 200,
+      "overflow": false,
+      "width": 390,
+      "unnamedInputs": [],
+      "unnamedButtons": 0
+    },
+    {
+      "role": "admin",
+      "path": "/admin/products",
+      "viewport": 390,
+      "status": 200,
+      "overflow": false,
+      "width": 390,
+      "unnamedInputs": [],
+      "unnamedButtons": 0
+    },
+    {
+      "role": "admin",
+      "path": "/admin/orders",
+      "viewport": 390,
+      "status": 200,
+      "overflow": false,
+      "width": 390,
+      "unnamedInputs": [],
+      "unnamedButtons": 0
+    },
+    {
+      "role": "admin",
+      "path": "/admin/reviews",
+      "viewport": 390,
+      "status": 200,
+      "overflow": false,
+      "width": 390,
+      "unnamedInputs": [],
+      "unnamedButtons": 0
+    },
+    {
+      "role": "admin",
+      "path": "/admin/reports",
+      "viewport": 390,
+      "status": 200,
+      "overflow": false,
+      "width": 390,
+      "unnamedInputs": [],
+      "unnamedButtons": 0
+    }
+  ],
+  "issues": [],
+  "errors": []
+}

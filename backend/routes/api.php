@@ -15,11 +15,9 @@ use App\Models\Category;
 
 // ไม่ต้อง Login ก็เข้าได้
 Route::post('/register', [AuthController::class, 'register']);
-Route::post('/login', [AuthController::class, 'login']);
+Route::post('/login', [AuthController::class, 'login'])->middleware('throttle:password-login');
 Route::get('/products', [ProductController::class, 'index']);
 Route::get('/products/{id}', [ProductController::class, 'show']);
-Route::get('/auth/google/redirect', [SocialAuthController::class, 'redirect']);
-Route::get('/auth/google/callback', [SocialAuthController::class, 'callback']);
 Route::get('/products/{productId}/reviews', [ReviewController::class, 'index']); // ดูรีวิว
 Route::get('/categories', function () {
     return response()->json(

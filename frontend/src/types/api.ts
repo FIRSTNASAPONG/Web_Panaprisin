@@ -76,9 +76,12 @@ export interface ApiError {
 
 // Preserve the response envelopes already supported by the frontend.
 export type ProductListResponse = Product[] | { data?: Product[]; products?: Product[] };
-export type OrderListResponse = Order[] | { data?: Order[] };
+export type OrderListResponse = Order[] | { data?: Order[]; current_page?: number; last_page?: number; total?: number };
 
 export interface Payment {
+  paid_at?: string | null;
+  verified_by?: number | null;
+  verification_reference?: string | null;
   payment_method: 'promptpay' | 'bank_transfer' | 'credit_card';
   payment_status: 'pending' | 'completed' | 'failed';
   amount: Decimal;

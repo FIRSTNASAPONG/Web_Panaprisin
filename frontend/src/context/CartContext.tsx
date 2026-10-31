@@ -1,7 +1,7 @@
 "use client";
 
 import type { ApiCart } from "@/types/api";
-import React, { createContext, useContext, useState, ReactNode, useEffect, useCallback } from 'react';
+import React, { createContext, useContext, useState, ReactNode, useEffect, useCallback, useRef } from 'react';
 
 export interface CartItem {
   id: number;            // คือ product_id
@@ -14,6 +14,9 @@ export interface CartItem {
 
 interface CartContextType {
   cart: CartItem[];
+  cartLoading: boolean;
+  cartError: string;
+  cartBusy: boolean;
   addToCart: (newItem: CartItem) => Promise<boolean>;
   removeFromCart: (id: number) => Promise<void>;
   clearCart: () => void;
@@ -25,11 +28,18 @@ const CartContext = createContext<CartContextType | undefined>(undefined);
 
 export function CartProvider({ children }: { children: ReactNode }) {
   const [cart, setCart] = useState<CartItem[]>([]);
+  const [cartLoading, setCartLoading] = useState(true);
+  const [cartError, setCartError] = useState('');
+  const [cartBusy, setCartBusy] = useState(false);
+  const mutation = useRef(false);
+  const fetchId = useRef(0);
   const [isLoaded, setIsLoaded] = useState(false);
   const apiUrl = process.env.NEXT_PUBLIC_API_URL || "/api";
 
   // 1. ฟังก์ชันดึงตะกร้าจาก Database (GET /api/cart)
   const fetchCartFromDB = useCallback(async () => {
+    const requestId = ++fetchId.current;
+    setCartLoading(true); setCartError('');
     const token = typeof window !== 'undefined' ? localStorage.getItem('token') : null;
 
     if (!token) {
@@ -41,7 +51,7 @@ export function CartProvider({ children }: { children: ReactNode }) {
           setCart([]);
         }
       }
-      setIsLoaded(true);
+      setIsLoaded(true); setCartLoading(false);
       return;
     }
 
@@ -55,6 +65,8 @@ export function CartProvider({ children }: { children: ReactNode }) {
         cache: 'no-store',
       });
 
+      if (!res.ok) throw new Error(res.status === 401 ? 'กรุณาเข้าสู่ระบบใหม่' : 'โหลดตะกร้าไม่สำเร็จ กรุณาลองอีกครั้ง');
+      if (requestId !== fetchId.current || token !== localStorage.getItem('token')) return;
       if (res.ok) {
         const data: ApiCart = await res.json();
         const items = Array.isArray(data.items) ? data.items : [];
@@ -71,9 +83,9 @@ export function CartProvider({ children }: { children: ReactNode }) {
         localStorage.setItem('cart', JSON.stringify(mappedCart));
       }
     } catch (error) {
-      console.warn('Failed to fetch cart from DB:', error);
+      if (requestId === fetchId.current) setCartError(error instanceof Error ? error.message : 'โหลดตะกร้าไม่สำเร็จ');
     } finally {
-      setIsLoaded(true);
+      if (requestId === fetchId.current) { setIsLoaded(true); setCartLoading(false); }
     }
   }, [apiUrl]);
 
@@ -136,72 +148,45 @@ export function CartProvider({ children }: { children: ReactNode }) {
     return true;
   };
 
-  // 3. แก้ไขจำนวนสินค้า (PUT /api/cart/{itemId})
-  const updateQuantity = async (id: number, quantity: number) => {
-    const newQty = Math.max(1, quantity);
+  // Authenticated mutations only update the UI after the server accepts them.
+  const mutateItem = async (id: number, quantity?: number) => {
+    if (mutation.current) return;
     const token = localStorage.getItem('token');
-    const targetItem = cart.find((item) => item.id === id);
-
-    setCart((prevCart) =>
-      prevCart.map((item) =>
-        item.id === id ? { ...item, quantity: newQty } : item
-      )
-    );
-
-    if (token && targetItem?.cart_item_id) {
-      try {
-        const res = await fetch(`${apiUrl}/cart/${targetItem.cart_item_id}`, {
-          method: 'PUT',
-          headers: {
-            'Content-Type': 'application/json',
-            'Accept': 'application/json',
-            'Authorization': `Bearer ${token}`,
-          },
-          body: JSON.stringify({ quantity: newQty }),
-        });
-
-        if (!res.ok) {
-          const err = await res.json().catch(() => ({}));
-          if (err.message) alert(err.message);
-          await fetchCartFromDB();
-        }
-      } catch (error) {
-        console.warn('Error updating quantity:', error);
-        await fetchCartFromDB();
-      }
+    const item = cart.find(value => value.id === id);
+    if (!token) {
+      setCart(previous => quantity === undefined ? previous.filter(value => value.id !== id)
+        : previous.map(value => value.id === id ? { ...value, quantity } : value));
+      return;
     }
-  };
-
-  // 4. ลบสินค้าออกจากตะกร้า (DELETE /api/cart/{itemId})
-  const removeFromCart = async (id: number) => {
-    const token = localStorage.getItem('token');
-    const targetItem = cart.find((item) => item.id === id);
-
-    setCart((prevCart) => prevCart.filter((item) => item.id !== id));
-
-    if (token && targetItem?.cart_item_id) {
-      try {
-        await fetch(`${apiUrl}/cart/${targetItem.cart_item_id}`, {
-          method: 'DELETE',
-          headers: {
-            'Accept': 'application/json',
-            'Authorization': `Bearer ${token}`,
-          },
-        });
-      } catch (error) {
-        console.warn('Error removing item:', error);
+    if (!item?.cart_item_id) { setCartError('กรุณาโหลดตะกร้าอีกครั้ง'); return; }
+    mutation.current = true; setCartBusy(true); setCartError('');
+    try {
+      const response = await fetch(`${apiUrl}/cart/${item.cart_item_id}`, {
+        method: quantity === undefined ? 'DELETE' : 'PUT',
+        headers: { Accept: 'application/json', 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
+        ...(quantity === undefined ? {} : { body: JSON.stringify({ quantity }) }),
+      });
+      if (!response.ok) {
+        const data = await response.json().catch(() => ({}));
+        throw new Error(data.message || 'บันทึกตะกร้าไม่สำเร็จ กรุณาลองอีกครั้ง');
       }
-    }
+      await fetchCartFromDB();
+    } catch (error) {
+      setCartError(error instanceof Error ? error.message : 'ไม่สามารถเชื่อมต่อเซิร์ฟเวอร์');
+    } finally { mutation.current = false; setCartBusy(false); }
   };
+  const updateQuantity = (id: number, quantity: number) => mutateItem(id, Math.max(1, quantity));
+  const removeFromCart = (id: number) => mutateItem(id);
 
   // 5. ล้างตะกร้าหน้าบ้าน
   const clearCart = () => {
+    ++fetchId.current; setCartError(''); setCartLoading(false);
     setCart([]);
     localStorage.removeItem('cart');
   };
 
   return (
-    <CartContext.Provider value={{ cart, addToCart, removeFromCart, clearCart, updateQuantity, fetchCartFromDB }}>
+    <CartContext.Provider value={{ cart, cartLoading, cartError, cartBusy, addToCart, removeFromCart, clearCart, updateQuantity, fetchCartFromDB }}>
       {children}
     </CartContext.Provider>
   );

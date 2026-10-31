@@ -14,55 +14,21 @@ export default function LoginPage() {
   const [password, setPassword] = useState('');
   const [errorMessage, setErrorMessage] = useState('');
   const [isLoading, setIsLoading] = useState(false);
-  
+
   const router = useRouter();
   const { fetchCartFromDB } = useCart();
 
   const apiUrl = process.env.NEXT_PUBLIC_API_URL || '/api';
 
-  // 🟢 ดักรับ token กรณีที่ SocialAuthController redirect กลับมาพร้อม ?token=...
+  // Reject obsolete URL-token login flows.
   useEffect(() => {
-    if (typeof window === 'undefined') return;
     const params = new URLSearchParams(window.location.search);
-    const tokenFromUrl = params.get('token') || params.get('access_token');
-    const errorFromUrl = params.get('error');
-
-    if (errorFromUrl) {
-      setErrorMessage('ไม่สามารถเข้าสู่ระบบด้วย Google ได้ กรุณาลองใหม่อีกครั้ง');
-      return;
+    if (params.has('token') || params.has('error')) {
+      // Legacy query-token callbacks are not accepted; remove sensitive URL data.
+      window.history.replaceState(null, '', '/login');
+      setErrorMessage('เข้าสู่ระบบด้วย Google ไม่สำเร็จ กรุณาลองอีกครั้ง');
     }
-
-    if (tokenFromUrl) {
-      setIsLoading(true);
-      localStorage.setItem('token', tokenFromUrl);
-
-      fetch(`${apiUrl}/user`, {
-        headers: {
-          Accept: 'application/json',
-          Authorization: `Bearer ${tokenFromUrl}`,
-        },
-      })
-        .then(async (res) => {
-          if (res.ok) {
-            const userData = await res.json();
-            localStorage.setItem('user', JSON.stringify(userData));
-            await fetchCartFromDB();
-            if (userData.role === 'seller' || userData.role === 'admin') {
-              window.location.href = '/seller';
-            } else {
-              window.location.href = '/';
-            }
-          } else {
-            setErrorMessage('ไม่สามารถดึงข้อมูลผู้ใช้งานจาก Google ได้');
-            setIsLoading(false);
-          }
-        })
-        .catch(() => {
-          setErrorMessage('เกิดข้อผิดพลาดในการเชื่อมต่อกับเซิร์ฟเวอร์');
-          setIsLoading(false);
-        });
-    }
-  }, [apiUrl, fetchCartFromDB]);
+  }, []);
 
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -72,21 +38,22 @@ export default function LoginPage() {
     try {
       const res = await api.post('/login', { email, password });
       const data = res.data;
-      
+
       localStorage.setItem('token', data.access_token || data.token);
       localStorage.setItem('user', JSON.stringify(data.user));
-      
+
       await fetchCartFromDB();
-      
-      if (data.user.role === 'seller' || data.user.role === 'admin') {
+
+      if (data.user.role === 'admin') {
+        router.push('/admin');
+      } else if (data.user.role === 'seller') {
         router.push('/seller');
       } else {
         router.push('/');
       }
-      
+
     } catch (error: unknown) {
       const errorData = isAxiosError<ApiError>(error) ? error.response?.data : undefined;
-      console.warn('Login error:', error);
       const backendMessage = errorData?.message || 'อีเมลหรือรหัสผ่านไม่ถูกต้อง กรุณาลองใหม่อีกครั้ง';
       setErrorMessage(backendMessage);
     } finally {
@@ -112,11 +79,11 @@ export default function LoginPage() {
 
       <div className="bg-[#1B4D3E] flex-grow flex items-center py-10">
         <div className="container mx-auto px-4 max-w-5xl flex justify-center md:justify-between items-center gap-8">
-          
+
           <div className="hidden md:block w-3/5 h-[480px]">
             <Image unoptimized loading="eager" width={600} height={800}
-              src="/image_289eb4.jpg" 
-              alt="ของเก่าโบราณ พณาไพรสิน" 
+              src="/image_289eb4.jpg"
+              alt="ของเก่าโบราณ พณาไพรสิน"
               className="w-full h-full object-cover rounded-md shadow-2xl border-4 border-white/10"
               onError={(e) => { e.currentTarget.src = 'https://placehold.co/600x800/1B4D3E/FFFFFF?text=Panaprisin' }}
             />
@@ -124,41 +91,41 @@ export default function LoginPage() {
 
           <div className="w-full max-w-[400px] bg-white rounded-sm shadow-xl p-8">
             <h2 className="text-xl text-gray-900 font-bold mb-6">เข้าสู่ระบบ</h2>
-            
+
             {errorMessage && (
-              <div className="bg-red-50 border-l-4 border-red-500 text-red-700 px-4 py-3 rounded-sm mb-6 text-sm font-medium shadow-sm">
+              <div role="alert" className="bg-red-50 border-l-4 border-red-500 text-red-700 px-4 py-3 rounded-sm mb-6 text-sm font-medium shadow-sm">
                 {errorMessage}
               </div>
             )}
-            
+
             <form className="space-y-4" onSubmit={handleLogin}>
               <div>
-                <input 
-                  type="email" 
+                <input
+                  type="email"
                   value={email}
                   onChange={(e) => setEmail(e.target.value)}
-                  placeholder="อีเมล (Email)" 
+                  aria-label="อีเมล (Email)" placeholder="อีเมล (Email)"
                   required
                   className="w-full px-4 py-3 border border-gray-300 rounded-sm focus:outline-none focus:ring-2 focus:ring-[#1B4D3E]/30 focus:border-[#1B4D3E] text-sm text-gray-900 placeholder-gray-400 font-medium transition"
                 />
               </div>
               <div>
-                <input 
-                  type="password" 
+                <input
+                  type="password"
                   value={password}
                   onChange={(e) => setPassword(e.target.value)}
-                  placeholder="รหัสผ่าน (Password)" 
+                  aria-label="รหัสผ่าน (Password)" placeholder="รหัสผ่าน (Password)"
                   required
                   className="w-full px-4 py-3 border border-gray-300 rounded-sm focus:outline-none focus:ring-2 focus:ring-[#1B4D3E]/30 focus:border-[#1B4D3E] text-sm text-gray-900 placeholder-gray-400 font-medium transition"
                 />
               </div>
-              
-              <button 
+
+              <button
                 type="submit"
                 disabled={isLoading}
                 className={`w-full py-3 rounded-sm font-bold shadow-sm uppercase mt-2 transition ${
-                  isLoading 
-                    ? 'bg-gray-400 text-gray-100 cursor-not-allowed' 
+                  isLoading
+                    ? 'bg-gray-400 text-gray-100 cursor-not-allowed'
                     : 'bg-[#1B4D3E] text-white hover:bg-[#143a2f]'
                 }`}
               >

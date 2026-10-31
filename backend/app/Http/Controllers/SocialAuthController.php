@@ -3,68 +3,59 @@
 namespace App\Http\Controllers;
 
 use App\Models\User;
-use Illuminate\Http\Request;
-use Laravel\Socialite\Facades\Socialite;
-use Illuminate\Support\Facades\Hash;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Str;
+use Laravel\Socialite\Facades\Socialite;
 
 class SocialAuthController extends Controller
 {
-    // 1. พาผู้ใช้ไปยังหน้า Login ของ Google (ใช้ stateless เพราะเป็น API)
     public function redirect()
     {
-        return Socialite::driver('google')->stateless()->redirect();
+        // These routes use the web middleware: Socialite verifies session-bound state.
+        return Socialite::driver('google')->redirect();
     }
 
-    // 2. รับข้อมูลกลับมาจาก Google
     public function callback()
     {
+        $frontend = rtrim(config('services.google.frontend_url'), '/');
         try {
-            $googleUser = Socialite::driver('google')->stateless()->user();
-            
-            // ดึงข้อมูลชื่อดิบจาก Google (Google จะส่ง given_name และ family_name มาให้ด้วย)
-            $rawUser = $googleUser->getRaw();
-            
-            // กรณี Google ส่ง given_name/family_name มา ให้ใช้ค่านั้น 
-            // แต่ถ้าไม่มี ให้แยกจาก getName() ด้วยช่องว่าง (explode)
-            $fullName = trim($googleUser->getName());
-            $nameParts = explode(' ', $fullName, 2);
-
-            $firstName = $rawUser['given_name'] ?? ($nameParts[0] ?? $fullName);
-            $lastName  = $rawUser['family_name'] ?? ($nameParts[1] ?? '');
-
-            // ค้นหา User ว่ามีอีเมลนี้ในระบบหรือยัง ถ้ายังให้สร้างใหม่
-            $user = User::updateOrCreate(
-                ['email' => $googleUser->getEmail()],
-                [
-                    'first_name' => $firstName,
-                    'last_name'  => $lastName,
-                    'google_id'  => $googleUser->getId(),
-                    'avatar'     => $googleUser->getAvatar(),
-                    // สร้างรหัสผ่านแบบสุ่มให้ไปเลย เพราะเป็นการล็อกอินผ่าน Google
-                    'password'   => Hash::make(Str::random(24)), 
-                ]
-            );
-
-            // ออก Token ด้วย Sanctum
-            $token = $user->createToken('auth_token')->plainTextToken;
-            
-            // เด้งกลับไปที่หน้า Frontend พร้อมแนบ Token และข้อมูล User ไปทาง URL
-            $frontendUrl = env('FRONTEND_URL', 'http://localhost:3000');
-            
-            $userData = json_encode([
-                'id'         => $user->id,
-                'first_name' => $user->first_name,
-                'last_name'  => $user->last_name,
-                'email'      => $user->email,
-                'role'       => $user->role ?? 'buyer',
-                'avatar'     => $user->avatar,
-            ]);
-            
-            return redirect()->away($frontendUrl . '/auth/callback?token=' . $token . '&user=' . urlencode($userData));
-
-        } catch (\Exception $e) {
-            return redirect()->away(env('FRONTEND_URL', 'http://localhost:3000') . '/login?error=GoogleLoginFailed');
+            $google = Socialite::driver('google')->user();
+            $raw = $google->getRaw();
+            $verified = $raw['email_verified'] ?? $raw['verified_email'] ?? false;
+            if (!in_array($verified, [true, 'true', 1, '1'], true) || !$google->getId()
+                || !filter_var($google->getEmail(), FILTER_VALIDATE_EMAIL)) {
+                throw new \RuntimeException('Unverified Google identity');
+            }
+            $token = DB::transaction(function () use ($google, $raw) {
+                $email = strtolower($google->getEmail());
+                $googleId = (string) $google->getId();
+                $user = User::where('google_id', $googleId)->lockForUpdate()->first();
+                if (!$user) {
+                    $user = User::whereRaw('LOWER(email) = ?', [$email])->lockForUpdate()->first();
+                    if ($user && $user->google_id && $user->google_id !== $googleId) {
+                        throw new \RuntimeException('Google identity mismatch');
+                    }
+                }
+                if (!$user) {
+                    $parts = explode(' ', trim((string) $google->getName()), 2);
+                    $user = User::create([
+                        'email' => $email, 'first_name' => $raw['given_name'] ?? ($parts[0] ?: 'ผู้ใช้งาน'),
+                        'last_name' => $raw['family_name'] ?? ($parts[1] ?? ''),
+                        'password' => Str::random(64), 'role' => 'buyer', 'google_id' => $googleId,
+                        'avatar' => $google->getAvatar(),
+                    ]);
+                } elseif (!$user->google_id) {
+                    // Link only a verified email. Never replace a local password, role or profile.
+                    $user->update(['google_id' => $googleId]);
+                }
+                return $user->createToken('auth_token')->plainTextToken;
+            });
+            // Fragments are not sent in HTTP requests/referrers; frontend immediately scrubs it.
+            return redirect()->away($frontend.'/auth/callback#token='.rawurlencode($token))
+                ->header('Cache-Control', 'no-store')->header('Referrer-Policy', 'no-referrer');
+        } catch (\Throwable $error) {
+            return redirect()->away($frontend.'/login?error=GoogleLoginFailed')
+                ->header('Cache-Control', 'no-store')->header('Referrer-Policy', 'no-referrer');
         }
     }
 }

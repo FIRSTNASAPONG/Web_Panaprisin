@@ -22,11 +22,9 @@ class OrderController extends Controller
             ], 403);
         }
         if ($user->role === 'admin') {
-            return response()->json(
-                Order::with(['user', 'items.product', 'payment'])
-                    ->latest()
-                    ->paginate(20)
-            );
+            $orders = Order::with(['user', 'items.product', 'payment'])->latest('id')->paginate(20);
+            $orders->getCollection()->each(fn ($order) => $order->payment?->makeVisible(['verified_by', 'verification_reference']));
+            return response()->json($orders);
         }
         $orders = Order::query()
             ->whereHas('items.product', function ($query) use ($user) {
@@ -50,7 +48,7 @@ class OrderController extends Controller
                 'items' => $order->items->map(function ($item) {
                     return [
                         'product_id' => $item->product_id,
-                        'name' => $item->product?->name,
+                        'name' => $item->product_name ?? $item->product?->name,
                         'quantity' => $item->quantity,
                         'price' => $item->unit_price,
                         'subtotal' => $item->subtotal,
@@ -136,6 +134,9 @@ class OrderController extends Controller
                         2
                     );
                     $total = bcadd($total, $subtotal, 2);
+                    if (bccomp($total, '99999999.99', 2) > 0) {
+                        throw ValidationException::withMessages(['cart' => 'ยอดรวมคำสั่งซื้อเกินวงเงินที่ระบบรองรับ']);
+                    }
                     $lines[] = [
                         'product' => $product,
                         'quantity' => $item->quantity,
