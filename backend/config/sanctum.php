@@ -37,7 +37,7 @@ return [
     |
     */
 
-    'guard' => ['web'],
+    'guard' => [], // API is Bearer-only; OAuth web sessions never authenticate API requests.
 
     /*
     |--------------------------------------------------------------------------

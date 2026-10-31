@@ -20,49 +20,15 @@ export default function LoginPage() {
 
   const apiUrl = process.env.NEXT_PUBLIC_API_URL || '/api';
 
-  // 🟢 ดักรับ token กรณีที่ SocialAuthController redirect กลับมาพร้อม ?token=...
+  // Reject obsolete URL-token login flows.
   useEffect(() => {
-    if (typeof window === 'undefined') return;
     const params = new URLSearchParams(window.location.search);
-    const tokenFromUrl = params.get('token') || params.get('access_token');
-    const errorFromUrl = params.get('error');
-
-    if (errorFromUrl) {
-      setErrorMessage('ไม่สามารถเข้าสู่ระบบด้วย Google ได้ กรุณาลองใหม่อีกครั้ง');
-      return;
+    if (params.has('token') || params.has('error')) {
+      // Legacy query-token callbacks are not accepted; remove sensitive URL data.
+      window.history.replaceState(null, '', '/login');
+      setErrorMessage('เข้าสู่ระบบด้วย Google ไม่สำเร็จ กรุณาลองอีกครั้ง');
     }
-
-    if (tokenFromUrl) {
-      setIsLoading(true);
-      localStorage.setItem('token', tokenFromUrl);
-
-      fetch(`${apiUrl}/user`, {
-        headers: {
-          Accept: 'application/json',
-          Authorization: `Bearer ${tokenFromUrl}`,
-        },
-      })
-        .then(async (res) => {
-          if (res.ok) {
-            const userData = await res.json();
-            localStorage.setItem('user', JSON.stringify(userData));
-            await fetchCartFromDB();
-            if (userData.role === 'seller' || userData.role === 'admin') {
-              window.location.href = '/seller';
-            } else {
-              window.location.href = '/';
-            }
-          } else {
-            setErrorMessage('ไม่สามารถดึงข้อมูลผู้ใช้งานจาก Google ได้');
-            setIsLoading(false);
-          }
-        })
-        .catch(() => {
-          setErrorMessage('เกิดข้อผิดพลาดในการเชื่อมต่อกับเซิร์ฟเวอร์');
-          setIsLoading(false);
-        });
-    }
-  }, [apiUrl, fetchCartFromDB]);
+  }, []);
 
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -78,7 +44,9 @@ export default function LoginPage() {
       
       await fetchCartFromDB();
       
-      if (data.user.role === 'seller' || data.user.role === 'admin') {
+      if (data.user.role === 'admin') {
+        router.push('/admin');
+      } else if (data.user.role === 'seller') {
         router.push('/seller');
       } else {
         router.push('/');
@@ -86,7 +54,6 @@ export default function LoginPage() {
       
     } catch (error: unknown) {
       const errorData = isAxiosError<ApiError>(error) ? error.response?.data : undefined;
-      console.warn('Login error:', error);
       const backendMessage = errorData?.message || 'อีเมลหรือรหัสผ่านไม่ถูกต้อง กรุณาลองใหม่อีกครั้ง';
       setErrorMessage(backendMessage);
     } finally {
