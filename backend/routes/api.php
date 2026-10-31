@@ -55,6 +55,8 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::post('/products/{productId}/reviews', [ReviewController::class, 'store']);
     // แอดมิน และ ผู้ขาย สามารถดูรายงานยอดขายได้ (ไปแยกสิทธิ์กันข้างใน Controller)
     Route::get('/reports/sales', [ReportController::class, 'salesSummary']);
+    Route::get('/seller/orders', [OrderController::class, 'index'])->name('seller.orders');
+    Route::get('/seller/reports/sales', [ReportController::class, 'salesSummary'])->name('seller.reports.sales');
     //order
     Route::get('/orders', [OrderController::class, 'index']);
     // ลบสินค้า
@@ -63,6 +65,7 @@ Route::middleware('auth:sanctum')->group(function () {
 
 Route::middleware(['auth:sanctum', IsAdmin::class])->group(function () {
     $admin = \App\Http\Controllers\AdminController::class;
+    Route::get('/admin/reports/sales', [ReportController::class, 'salesSummary']);
     Route::get('/admin/overview', [$admin, 'overview']);
     Route::get('/admin/users', [$admin, 'users']);
     Route::patch('/admin/users/{id}', [$admin, 'updateUser'])->whereNumber('id');

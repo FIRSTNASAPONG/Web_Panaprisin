@@ -27,12 +27,12 @@ class SalesReportTest extends TestCase
             $order->payment()->create(['amount' => $amount, 'payment_method' => 'bank_transfer', 'payment_status' => $payment, 'paid_at' => '2026-10-30 17:00:00']);
         }
         Sanctum::actingAs($admin);
-        $this->getJson('/api/reports/sales')->assertOk()->assertJsonPath('total_orders', 3)->assertJsonPath('total_revenue', fn ($v) => (float) $v === 90.0)->assertJsonCount(2, 'top_selling_products');
-        $this->getJson('/api/reports/sales?from=2026-10-31&to=2026-10-31')->assertJsonPath('total_orders', 3);
-        $this->getJson('/api/reports/sales?from=2026-10-30&to=2026-10-30')->assertJsonPath('total_orders', 0);
-        $this->getJson('/api/reports/sales?from=2026-11-01&to=2026-10-01')->assertUnprocessable();
-        $this->getJson('/api/reports/sales?to=2026-10-31')->assertOk()->assertJsonPath('total_orders', 3);
-        $this->getJson('/api/reports/sales?from=bad')->assertUnprocessable();
+        $this->getJson('/api/admin/reports/sales')->assertOk()->assertJsonPath('total_orders', 3)->assertJsonPath('total_revenue', fn ($v) => (float) $v === 90.0)->assertJsonCount(2, 'top_selling_products');
+        $this->getJson('/api/admin/reports/sales?from=2026-10-31&to=2026-10-31')->assertJsonPath('total_orders', 3);
+        $this->getJson('/api/admin/reports/sales?from=2026-10-30&to=2026-10-30')->assertJsonPath('total_orders', 0);
+        $this->getJson('/api/admin/reports/sales?from=2026-11-01&to=2026-10-01')->assertUnprocessable();
+        $this->getJson('/api/admin/reports/sales?to=2026-10-31')->assertOk()->assertJsonPath('total_orders', 3);
+        $this->getJson('/api/admin/reports/sales?from=bad')->assertUnprocessable();
         $a->update(['is_active' => false]);
         Sanctum::actingAs($seller);
         $this->getJson('/api/reports/sales?user_id='.$other->id)->assertOk()->assertJsonPath('total_orders', 3)->assertJsonPath('total_revenue', fn ($v) => (float) $v === 45.0)->assertJsonCount(1, 'top_selling_products')->assertJsonPath('top_selling_products.0.product_id', $a->id);

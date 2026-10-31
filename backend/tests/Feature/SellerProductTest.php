@@ -39,7 +39,8 @@ class SellerProductTest extends TestCase
         $order = Order::create(['user_id' => $buyer->id, 'total_amount' => '20.50', 'shipping_address' => 'Test']);
         $order->items()->create(['product_id' => $id, 'quantity' => 1, 'unit_price' => '20.50', 'subtotal' => '20.50']);
         Sanctum::actingAs(User::factory()->create(['role' => 'admin']));
-        $this->patchJson("/api/products/$id", ['description' => 'Admin update'])->assertOk();
+        $this->patchJson("/api/products/$id", ['description' => 'Admin update'])->assertForbidden();
+        $this->patchJson("/api/admin/products/$id", ['description' => 'Admin update'])->assertOk();
         Sanctum::actingAs($seller);
         $this->deleteJson("/api/products/$id")->assertOk();
         $this->assertDatabaseHas('products', ['id' => $id, 'is_active' => false]);

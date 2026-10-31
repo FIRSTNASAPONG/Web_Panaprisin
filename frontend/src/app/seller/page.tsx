@@ -31,8 +31,8 @@ export default function SellerCentrePage() {
 
       const [productsRes, ordersRes, reportRes] = await Promise.all([
         fetch(`${process.env.NEXT_PUBLIC_API_URL || "/api"}/me/products`, { headers, cache: 'no-store' }),
-        fetch(`${process.env.NEXT_PUBLIC_API_URL || "/api"}/orders`, { headers, cache: 'no-store' }),
-        fetch(`${process.env.NEXT_PUBLIC_API_URL || "/api"}/reports/sales`, { headers, cache: 'no-store' })
+        fetch(`${process.env.NEXT_PUBLIC_API_URL || "/api"}/seller/orders`, { headers, cache: 'no-store' }),
+        fetch(`${process.env.NEXT_PUBLIC_API_URL || "/api"}/seller/reports/sales`, { headers, cache: 'no-store' })
       ]);
 
       let myProducts: Product[] = [];
@@ -41,10 +41,8 @@ export default function SellerCentrePage() {
       if (productsRes.ok) {
         const productsData: ProductListResponse = await productsRes.json();
         const allProducts = Array.isArray(productsData) ? productsData : (productsData.data || []);
-        // 🟢 กรองเฉพาะสินค้าของ Seller ที่ล็อกอินอยู่ (ถ้าเป็น admin เห็นทั้งหมด)
-        myProducts = currentUser.role === 'admin'
-          ? allProducts
-          : allProducts.filter((p) => Number(p.user_id) === Number(currentUser.id));
+        // แสดงเฉพาะสินค้าของบัญชีปัจจุบัน
+        myProducts = allProducts.filter((p) => Number(p.user_id) === Number(currentUser.id));
       }
 
       if (ordersRes.ok) {

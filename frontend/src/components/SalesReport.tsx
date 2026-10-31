@@ -3,9 +3,9 @@ import { useState } from 'react';
 import { useAccountData } from '@/lib/account';
 import type { Decimal } from '@/types/api';
 type Report = { role_view: string; total_revenue: Decimal; total_orders: number; top_selling_products: { product_id: number; total_sold: number; revenue: Decimal; product: { name: string } | null }[] };
-export default function SalesReport() {
+export default function SalesReport({ sellerScope = false }: { sellerScope?: boolean }) {
   const [query, setQuery] = useState('');
-  const { data, error, loading, retry } = useAccountData<Report>(`/reports/sales${query}`);
+  const { data, error, loading, retry } = useAccountData<Report>(`${sellerScope ? '/seller/reports/sales' : '/admin/reports/sales'}${query}`);
   return <section><h1 className="text-2xl font-bold text-[#1B4D3E] mb-4">รายงานยอดขาย</h1>
     <p className="text-gray-600 mb-4">นับยอดรับชำระครบของออเดอร์ paid, shipped และ completed ตามวันที่รับเงิน (เวลาไทย) ผู้ขายเห็นเฉพาะร้านตนเอง</p>
     <form className="flex flex-wrap gap-3 mb-5" onSubmit={event => { event.preventDefault(); const form = new FormData(event.currentTarget); const params = new URLSearchParams(); for (const key of ['from','to']) { const value = String(form.get(key) || ''); if (value) params.set(key,value); } setQuery(`?${params}`); }}>

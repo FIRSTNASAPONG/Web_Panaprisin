@@ -22,12 +22,11 @@ export default function SellerOrdersPage() {
   // สำหรับ Modal ดูรายละเอียดออเดอร์
   const [selectedOrder, setSelectedOrder] = useState<Order | null>(null);
   const [isModalOpen, setIsModalOpen] = useState(false);
-  const [statusUpdateLoading, setStatusUpdateLoading] = useState(false);
 
   const fetchOrders = useCallback(async (token: string) => {
     setLoading(true); setError('');
     try {
-      const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL || "/api"}/orders?page=${page}`, {
+      const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL || "/api"}/seller/orders?page=${page}`, {
         method: 'GET',
         headers: {
           'Accept': 'application/json',
@@ -104,42 +103,6 @@ export default function SellerOrdersPage() {
         return <span className="bg-red-100 text-red-800 px-3 py-1 rounded-full text-xs font-bold">ยกเลิก</span>;
       default:
         return <span className="bg-gray-100 text-gray-800 px-3 py-1 rounded-full text-xs font-bold">{status || 'ไม่ทราบสถานะ'}</span>;
-    }
-  };
-
-  // 🟢 อัปเดตสถานะคำสั่งซื้อ (ส่งคีย์ order_status ตามที่ OrderController กำหนด)
-  const handleUpdateStatus = async (orderId: number, newStatus: string) => {
-    const token = localStorage.getItem('token');
-    if (!token) return;
-
-    if (!confirm(`ยืนยันการเปลี่ยนสถานะคำสั่งซื้อเป็น "${newStatus}" ?`)) return;
-
-    setStatusUpdateLoading(true);
-    try {
-      const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL || "/api"}/orders/${orderId}/status`, {
-        method: 'PUT',
-        headers: {
-          'Content-Type': 'application/json',
-          'Accept': 'application/json',
-          'Authorization': `Bearer ${token}`,
-        },
-        body: JSON.stringify({ order_status: newStatus }),
-      });
-
-      const data = await res.json().catch(() => ({}));
-
-      if (res.ok) {
-        alert('อัปเดตสถานะคำสั่งซื้อสำเร็จ!');
-        await fetchOrders(token);
-        setIsModalOpen(false);
-      } else {
-        alert(data.message || 'ไม่สามารถอัปเดตสถานะได้ (เฉพาะ Admin เท่านั้นที่เปลี่ยนสถานะได้)');
-      }
-    } catch (error) {
-      console.error('Update status error:', error);
-      alert('เกิดข้อผิดพลาดในการเชื่อมต่อเซิร์ฟเวอร์');
-    } finally {
-      setStatusUpdateLoading(false);
     }
   };
 
@@ -318,39 +281,7 @@ export default function SellerOrdersPage() {
               </div>
             </div>
 
-            {/* ปุ่มเปลี่ยนสถานะ (แสดงเฉพาะ Admin ตามที่ Backend กำหนด) */}
-            {userRole === 'admin' && (
-              <div className="p-6 border-t border-gray-200 bg-gray-50 flex flex-wrap gap-2 justify-end rounded-b-lg">
-                <button
-                  disabled={statusUpdateLoading}
-                  onClick={() => handleUpdateStatus(selectedOrder.id, 'paid')}
-                  className="px-3 py-2 bg-blue-600 text-white rounded-md font-bold text-xs hover:bg-blue-700 transition disabled:opacity-50"
-                >
-                  ชำระเงินแล้ว (paid)
-                </button>
-                <button
-                  disabled={statusUpdateLoading}
-                  onClick={() => handleUpdateStatus(selectedOrder.id, 'shipped')}
-                  className="px-3 py-2 bg-purple-600 text-white rounded-md font-bold text-xs hover:bg-purple-700 transition disabled:opacity-50"
-                >
-                  จัดส่งแล้ว (shipped)
-                </button>
-                <button
-                  disabled={statusUpdateLoading}
-                  onClick={() => handleUpdateStatus(selectedOrder.id, 'completed')}
-                  className="px-3 py-2 bg-green-700 text-white rounded-md font-bold text-xs hover:bg-green-700 transition disabled:opacity-50"
-                >
-                  สำเร็จ (completed)
-                </button>
-                <button
-                  disabled={statusUpdateLoading}
-                  onClick={() => handleUpdateStatus(selectedOrder.id, 'cancelled')}
-                  className="px-3 py-2 bg-red-600 text-white rounded-md font-bold text-xs hover:bg-red-700 transition disabled:opacity-50 ml-auto"
-                >
-                  ยกเลิก (cancelled)
-                </button>
-              </div>
-            )}
+            {userRole === 'admin' && <div className="p-6 border-t border-gray-200 bg-gray-50"><Link href="/admin/orders" className="text-[#1B4D3E] underline">จัดการคำสั่งซื้อใน Admin Dashboard</Link></div>}
           </div>
         </div>
       )}

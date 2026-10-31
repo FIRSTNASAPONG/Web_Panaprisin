@@ -34,10 +34,8 @@ export default function SellerProductsPage() {
       if (res.ok) {
         const data: ProductListResponse = await res.json();
         const allProducts = Array.isArray(data) ? data : (data.data || data.products || []);
-        // 🟢 แสดงเฉพาะสินค้าของ Seller ที่ล็อกอินอยู่ (Admin เห็นทั้งหมด)
-        const myProducts = currentUser.role === 'admin'
-          ? allProducts
-          : allProducts.filter((p) => Number(p.user_id) === Number(currentUser.id));
+        // แสดงเฉพาะสินค้าของบัญชีปัจจุบัน
+        const myProducts = allProducts.filter((p) => Number(p.user_id) === Number(currentUser.id));
         setProducts(myProducts);
       } else {
         throw new Error('โหลดข้อมูลไม่สำเร็จ กรุณาลองอีกครั้ง');

@@ -21,7 +21,7 @@ class OrderController extends Controller
                 'message' => 'Forbidden'
             ], 403);
         }
-        if ($user->role === 'admin') {
+        if ($user->role === 'admin' && $request->is('api/admin/*')) {
             $orders = Order::with(['user', 'items.product', 'payment'])->latest('id')->paginate(20);
             $orders->getCollection()->each(fn ($order) => $order->payment?->makeVisible(['verified_by', 'verification_reference']));
             return response()->json($orders);

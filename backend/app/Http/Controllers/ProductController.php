@@ -16,10 +16,7 @@ class ProductController extends Controller
     public function mine(Request $request)
     {
         abort_unless(in_array($request->user()->role, ['seller', 'admin'], true), 403);
-        $query = Product::where('is_active', true);
-        if ($request->user()->role !== 'admin') {
-            $query->where('user_id', $request->user()->id);
-        }
+        $query = Product::where('is_active', true)->where('user_id', $request->user()->id);
         return response()->json($query->latest('id')->get());
     }
 
@@ -39,8 +36,8 @@ class ProductController extends Controller
 
     private function authorizeProduct(Request $request, Product $product): void
     {
-        abort_unless($request->user()->role === 'admin' ||
-            ($request->user()->role === 'seller' && (int) $product->user_id === (int) $request->user()->id), 403);
+        abort_unless(($request->user()->role === 'admin' && $request->is('api/admin/*')) ||
+            (in_array($request->user()->role, ['seller', 'admin'], true) && (int) $product->user_id === (int) $request->user()->id), 403);
     }
 
     public function store(Request $request)

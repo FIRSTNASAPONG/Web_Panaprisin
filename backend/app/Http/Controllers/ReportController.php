@@ -28,7 +28,7 @@ class ReportController extends Controller
                         ->when($until, fn ($q) => $q->where('paid_at', '<', $until));
                 });
         });
-        if ($user->role === 'seller') {
+        if ($user->role === 'seller' || !$request->is('api/admin/*')) {
             $items->whereHas('product', fn ($q) => $q->where('user_id', $user->id));
         }
         return response()->json([
