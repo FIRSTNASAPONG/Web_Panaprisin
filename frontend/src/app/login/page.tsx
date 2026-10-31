@@ -106,7 +106,7 @@ export default function LoginPage() {
                   onChange={(e) => setEmail(e.target.value)}
                   aria-label="อีเมล (Email)" placeholder="อีเมล (Email)"
                   required
-                  className="w-full px-4 py-3 border border-gray-300 rounded-sm focus:outline-none focus:ring-2 focus:ring-[#1B4D3E]/30 focus:border-[#1B4D3E] text-sm text-gray-900 placeholder-gray-400 font-medium transition"
+                  className="w-full px-4 py-3 border border-gray-300 rounded-sm focus:outline-none focus:ring-2 focus:ring-[#1B4D3E]/30 focus:border-[#1B4D3E] text-sm text-gray-900 placeholder-gray-600 font-medium transition"
                 />
               </div>
               <div>
@@ -116,7 +116,7 @@ export default function LoginPage() {
                   onChange={(e) => setPassword(e.target.value)}
                   aria-label="รหัสผ่าน (Password)" placeholder="รหัสผ่าน (Password)"
                   required
-                  className="w-full px-4 py-3 border border-gray-300 rounded-sm focus:outline-none focus:ring-2 focus:ring-[#1B4D3E]/30 focus:border-[#1B4D3E] text-sm text-gray-900 placeholder-gray-400 font-medium transition"
+                  className="w-full px-4 py-3 border border-gray-300 rounded-sm focus:outline-none focus:ring-2 focus:ring-[#1B4D3E]/30 focus:border-[#1B4D3E] text-sm text-gray-900 placeholder-gray-600 font-medium transition"
                 />
               </div>
 
@@ -140,7 +140,7 @@ export default function LoginPage() {
             {/* 🟢 เส้นคั่น และปุ่มเข้าสู่ระบบด้วย Google */}
             <div className="relative my-6 flex items-center justify-center">
               <div className="border-t border-gray-300 w-full"></div>
-              <span className="bg-white px-3 text-xs text-gray-400 uppercase font-medium">หรือ</span>
+              <span className="bg-white px-3 text-xs text-gray-600 uppercase font-medium">หรือ</span>
               <div className="border-t border-gray-300 w-full"></div>
             </div>
 

@@ -195,7 +195,7 @@ export default function ProductDetailPage() {
                   onClick={() => handleAddToCart(false)}
                   className={`flex items-center justify-center gap-2 border px-6 py-3 rounded-sm font-medium transition ${
                     isOutOfStock
-                      ? 'border-gray-300 bg-gray-100 text-gray-400 cursor-not-allowed'
+                      ? 'border-gray-300 bg-gray-100 text-gray-600 cursor-not-allowed'
                       : 'border-[#1B4D3E] bg-[#1B4D3E]/10 text-[#1B4D3E] hover:bg-[#1B4D3E]/20'
                   }`}
                 >

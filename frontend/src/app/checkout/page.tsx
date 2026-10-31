@@ -252,7 +252,7 @@ export default function CheckoutPage() {
                 <div className="space-y-4 mb-6">
                   {cart.map((item) => (
                     <div key={item.id} className="flex gap-4">
-                      <div className="w-20 h-24 bg-gray-100 text-gray-400 flex items-center justify-center shrink-0 border border-gray-200 rounded-sm">
+                      <div className="w-20 h-24 bg-gray-100 text-gray-600 flex items-center justify-center shrink-0 border border-gray-200 rounded-sm">
                         {item.image ? (
                           <Image unoptimized loading="eager" width={80} height={96} src={getProductImageUrl(item.image)} alt={item.name} className="w-full h-full object-cover rounded-sm" onError={(e) => { e.currentTarget.src = '/image_289eb4.jpg'; }} />
                         ) : (

@@ -202,7 +202,7 @@ export default function SellerProductsPage() {
                                   onError={(e) => { e.currentTarget.src = '/image_289eb4.jpg' }}
                                 />
                               ) : (
-                                <span className="text-[10px] text-gray-400 font-bold">ไม่มีรูป</span>
+                                <span className="text-[10px] text-gray-600 font-bold">ไม่มีรูป</span>
                               )}
                             </div>
                           </td>
@@ -221,7 +221,7 @@ export default function SellerProductsPage() {
                               onClick={() => handleDeleteProduct(product.id, product.name)}
                               disabled={deleteLoading === product.id}
                               className={`font-bold transition ${
-                                deleteLoading === product.id ? 'text-gray-400 cursor-not-allowed' : 'text-red-600 hover:text-red-800'
+                                deleteLoading === product.id ? 'text-gray-600 cursor-not-allowed' : 'text-red-600 hover:text-red-800'
                               }`}
                             >
                               {deleteLoading === product.id ? 'กำลังลบ...' : 'ลบ'}

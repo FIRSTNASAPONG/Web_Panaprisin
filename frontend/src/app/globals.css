@@ -24,3 +24,23 @@ body {
   color: var(--foreground);
   font-family: Arial, Helvetica, sans-serif;
 }
+
+/* Keep existing light surfaces legible in both OS themes.
+   Explicit brand and status utilities override these base defaults. */
+@layer base {
+  :where(.bg-white, .bg-gray-50, .bg-gray-100, .bg-gray-200, .bg-\[\#f5f5f5\]) {
+    color: #1f2937;
+    color-scheme: light;
+  }
+
+  input:not([type="checkbox"]):not([type="radio"]), select, textarea {
+    color: #111827;
+    background-color: #ffffff;
+    color-scheme: light;
+  }
+
+  input::placeholder, textarea::placeholder {
+    color: #4b5563;
+    opacity: 1;
+  }
+}

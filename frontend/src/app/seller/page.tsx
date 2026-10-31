@@ -229,7 +229,7 @@ export default function SellerCentrePage() {
                     <tbody className="text-sm text-gray-700">
                       {recentOrders.length === 0 ? (
                         <tr>
-                          <td colSpan={4} className="px-6 py-10 text-center text-gray-400 font-medium">ยังไม่มีคำสั่งซื้อในขณะนี้</td>
+                          <td colSpan={4} className="px-6 py-10 text-center text-gray-600 font-medium">ยังไม่มีคำสั่งซื้อในขณะนี้</td>
                         </tr>
                       ) : (
                         recentOrders.map((order) => {

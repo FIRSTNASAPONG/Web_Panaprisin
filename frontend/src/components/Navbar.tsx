@@ -158,7 +158,7 @@ export default function Navbar() {
                       setSearchTerm('');
                       router.push('/');
                     }}
-                    className="px-2 text-gray-400 hover:text-gray-600 text-xs font-bold"
+                    className="px-2 text-gray-600 hover:text-gray-600 text-xs font-bold"
                     title="ล้างคำค้นหา"
                   >
                     ✕
@@ -177,7 +177,7 @@ export default function Navbar() {
             <Link href="/cart" className="flex-shrink-0 mr-4 cursor-pointer hover:opacity-80 transition relative block">
               <svg xmlns="http://www.w3.org/2000/svg" width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="8" cy="21" r="1"/><circle cx="19" cy="21" r="1"/><path d="M2.05 2.05h2l2.66 12.42a2 2 0 0 0 2 1.58h9.78a2 2 0 0 0 1.95-1.57l1.65-7.43H5.12"/></svg>
               {totalItems > 0 && (
-                <span className="absolute -top-2 -right-2 bg-red-500 text-white text-xs font-bold w-5 h-5 flex items-center justify-center rounded-full border-2 border-[#1B4D3E]">
+                <span className="absolute -top-2 -right-2 bg-red-700 text-white text-xs font-bold w-5 h-5 flex items-center justify-center rounded-full border-2 border-[#1B4D3E]">
                   {totalItems > 99 ? '99+' : totalItems}
                 </span>
               )}

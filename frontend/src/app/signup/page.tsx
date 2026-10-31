@@ -210,7 +210,7 @@ export default function SignupPage() {
             {/* 🟢 เส้นคั่น และปุ่มสมัครด้วย Google */}
             <div className="relative my-5 flex items-center justify-center">
               <div className="border-t border-gray-300 w-full"></div>
-              <span className="bg-white px-3 text-xs text-gray-400 uppercase font-medium">หรือ</span>
+              <span className="bg-white px-3 text-xs text-gray-600 uppercase font-medium">หรือ</span>
               <div className="border-t border-gray-300 w-full"></div>
             </div>
 

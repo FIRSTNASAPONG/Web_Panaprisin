@@ -270,7 +270,7 @@ export default function SellerOrdersPage() {
               <h3 className="text-xl font-bold text-gray-900">
                 รายละเอียดคำสั่งซื้อ <span className="text-[#1B4D3E]">#{selectedOrder.id}</span>
               </h3>
-              <button aria-label="ปิดรายละเอียดคำสั่งซื้อ" onClick={() => setIsModalOpen(false)} className="text-gray-400 hover:text-red-500 transition font-bold text-xl">
+              <button aria-label="ปิดรายละเอียดคำสั่งซื้อ" onClick={() => setIsModalOpen(false)} className="text-gray-600 hover:text-red-500 transition font-bold text-xl">
                 ✕
               </button>
             </div>
@@ -338,7 +338,7 @@ export default function SellerOrdersPage() {
                 <button
                   disabled={statusUpdateLoading}
                   onClick={() => handleUpdateStatus(selectedOrder.id, 'completed')}
-                  className="px-3 py-2 bg-green-600 text-white rounded-md font-bold text-xs hover:bg-green-700 transition disabled:opacity-50"
+                  className="px-3 py-2 bg-green-700 text-white rounded-md font-bold text-xs hover:bg-green-700 transition disabled:opacity-50"
                 >
                   สำเร็จ (completed)
                 </button>

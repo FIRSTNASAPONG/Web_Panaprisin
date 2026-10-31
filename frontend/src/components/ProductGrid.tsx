@@ -287,7 +287,7 @@ export default function ProductGrid({
                     <div className="text-sm text-gray-800 line-clamp-2 mb-1 min-h-[40px]">
                       {product.name}
                     </div>
-                    <div className="text-xs text-gray-400 mb-2">
+                    <div className="text-xs text-gray-600 mb-2">
                       คงเหลือ {stockCount} ชิ้น
                     </div>
                     <div className="mt-auto flex items-center justify-between">
@@ -315,7 +315,7 @@ export default function ProductGrid({
                         disabled={isOutOfStock}
                         className={`text-xs px-3 py-1.5 rounded-sm transition z-10 font-medium ${
                           isOutOfStock
-                            ? "bg-gray-200 text-gray-400 cursor-not-allowed"
+                            ? "bg-gray-200 text-gray-600 cursor-not-allowed"
                             : "bg-[#1B4D3E] text-white hover:bg-[#143a2f]"
                         }`}
                       >

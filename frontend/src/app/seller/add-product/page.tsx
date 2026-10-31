@@ -395,7 +395,7 @@ export default function AddProductPage() {
                       className="w-full h-full object-cover"
                     />
                   ) : (
-                    <span className="text-gray-400 text-sm font-medium">
+                    <span className="text-gray-600 text-sm font-medium">
                       ไม่มีรูปภาพ
                     </span>
                   )}
