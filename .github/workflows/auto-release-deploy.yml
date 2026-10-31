@@ -14,7 +14,7 @@ permissions:
   contents: write
 
 concurrency:
-  group: panaprisin-auto-release-production
+  group: panaprisin-production-deployment
   cancel-in-progress: false
 
 jobs:

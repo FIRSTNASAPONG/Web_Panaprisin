@@ -90,3 +90,55 @@ jobs:
           CACHE_STORE: array
           SESSION_DRIVER: array
           QUEUE_CONNECTION: sync
+
+  reliability:
+    name: Health probes and Compose validation
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - run: bash -n scripts/check-health.sh
+      - run: python3 tests/health-check-test.py
+      - run: docker compose config --quiet
+
+  postgres:
+    name: Backend - PostgreSQL Tests
+    runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: postgres:17-alpine
+        env:
+          POSTGRES_DB: panaprisin_ecommerce_test
+          POSTGRES_USER: test_user
+          POSTGRES_PASSWORD: test_password
+        ports: ['5432:5432']
+        options: >-
+          --health-cmd="pg_isready -U test_user -d panaprisin_ecommerce_test"
+          --health-interval=5s --health-timeout=5s --health-retries=10
+    defaults:
+      run:
+        working-directory: backend
+    steps:
+      - uses: actions/checkout@v4
+      - uses: shivammathur/setup-php@v2
+        with:
+          php-version: '8.3'
+          extensions: mbstring, pdo_pgsql, bcmath, fileinfo
+          coverage: none
+          tools: composer:v2
+      - run: composer install --no-interaction --prefer-dist --no-progress
+      - run: |
+          cp .env.example .env
+          php artisan key:generate --no-interaction
+      - run: php artisan test --no-ansi
+        env:
+          APP_ENV: testing
+          DB_CONNECTION: pgsql
+          DB_HOST: 127.0.0.1
+          DB_PORT: 5432
+          DB_DATABASE: panaprisin_ecommerce_test
+          DB_USERNAME: test_user
+          DB_PASSWORD: test_password
+          DB_URL: ''
+          CACHE_STORE: array
+          SESSION_DRIVER: array
+          QUEUE_CONNECTION: sync
