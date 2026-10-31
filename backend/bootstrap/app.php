@@ -13,14 +13,9 @@ return Application::configure(basePath: dirname(__DIR__))
         health: '/up',
     )
     ->withMiddleware(function (Middleware $middleware): void {
-        // เพิ่มส่วนนี้เพื่อจัดการ CORS แบบง่ายๆ
-        $middleware->validateCsrfTokens(except: [
-            '*', // ถ้าทำ API เป็นหลัก ยกเว้น CSRF ไปเลยก็ได้ครับ (Sanctum จัดการ Token แทน)
-        ]);
+        // API authentication is explicit Sanctum Bearer tokens, not browser cookies.
+        // Web routes (including OAuth) retain Laravel's default session + CSRF middleware.
 
-        // ถ้าคุณมี URL ของ Frontend (เช่น http://localhost:3000)
-        // คุณสามารถตั้งค่า Statefule Domains สำหรับ Sanctum ได้ตรงนี้
-        $middleware->statefulApi();
     })
     ->withExceptions(function (Exceptions $exceptions): void {
         $exceptions->shouldRenderJsonWhen(

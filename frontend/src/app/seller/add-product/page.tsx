@@ -324,6 +324,7 @@ export default function AddProductPage() {
                   </label>
                   <input
                     type="text"
+                    aria-label="ชื่อสินค้า"
                     required
                     value={name}
                     onChange={(e) => setName(e.target.value)}
@@ -335,7 +336,7 @@ export default function AddProductPage() {
                   <label className="block text-base font-bold text-gray-900 mb-2">
                     หมวดหมู่ <span className="text-red-500">*</span>
                   </label>
-                  <select
+                  <select aria-label="หมวดหมู่"
                     value={category}
                     onChange={(e) => setCategory(e.target.value)}
                     disabled={categoriesLoading || categories.length === 0}
@@ -366,7 +367,7 @@ export default function AddProductPage() {
                   <label className="block text-base font-bold text-gray-900 mb-2">
                     รายละเอียดสินค้า
                   </label>
-                  <textarea
+                  <textarea aria-label="รายละเอียดสินค้า"
                     rows={5}
                     value={description}
                     onChange={(e) => setDescription(e.target.value)}
@@ -431,6 +432,7 @@ export default function AddProductPage() {
                     min="0"
                     step="0.01"
                     required
+                    aria-label="ราคา (บาท)"
                     value={price}
                     onChange={(e) => setPrice(e.target.value)}
                     className="w-full px-4 py-3 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-[#1B4D3E]/50 focus:border-[#1B4D3E] text-gray-900 transition"
@@ -444,6 +446,7 @@ export default function AddProductPage() {
                     type="number"
                     min="0"
                     required
+                    aria-label="คลัง (ชิ้น)"
                     value={stock}
                     onChange={(e) => setStock(e.target.value)}
                     className="w-full px-4 py-3 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-[#1B4D3E]/50 focus:border-[#1B4D3E] text-gray-900 transition"

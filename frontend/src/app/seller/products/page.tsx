@@ -13,11 +13,13 @@ export default function SellerProductsPage() {
   const router = useRouter();
   const [products, setProducts] = useState<Product[]>([]);
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState('');
+  const [attempt, setAttempt] = useState(0);
   const [adminName, setAdminName] = useState('ผู้ขาย');
   const [deleteLoading, setDeleteLoading] = useState<number | null>(null);
 
   const fetchProducts = useCallback(async (currentUser: User) => {
-    setLoading(true);
+    setLoading(true); setError('');
     try {
       const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL || "/api"}/me/products`, {
         method: 'GET',
@@ -38,11 +40,11 @@ export default function SellerProductsPage() {
           : allProducts.filter((p) => Number(p.user_id) === Number(currentUser.id));
         setProducts(myProducts);
       } else {
-        setProducts([]);
+        throw new Error('โหลดข้อมูลไม่สำเร็จ กรุณาลองอีกครั้ง');
       }
     } catch (error) {
       console.error('Fetch products error:', error);
-      setProducts([]);
+      setError('โหลดข้อมูลไม่สำเร็จ กรุณาลองอีกครั้ง');
     } finally {
       setLoading(false);
     }
@@ -61,7 +63,7 @@ export default function SellerProductsPage() {
 
     setAdminName(user.first_name || user.name || 'ผู้ขาย');
     fetchProducts(user);
-  }, [router, fetchProducts]);
+  }, [router, fetchProducts, attempt]);
 
   // ฟังก์ชันลบสินค้า (แนบ Token)
   const handleDeleteProduct = async (id: number, name: string) => {
@@ -141,7 +143,7 @@ export default function SellerProductsPage() {
       </aside>
 
       {/* Main Content Area */}
-      <main className="flex-1 flex flex-col h-screen overflow-hidden">
+      <main className="min-w-0 flex-1 flex flex-col h-screen overflow-hidden">
         <header className="bg-white h-16 shadow-sm flex items-center justify-between px-8 shrink-0 border-b border-gray-200 z-10">
           <h1 className="text-xl font-bold text-gray-800">คลังสินค้าของฉัน</h1>
           <div className="flex items-center gap-4">
@@ -166,7 +168,7 @@ export default function SellerProductsPage() {
               <h2 className="text-lg font-bold text-gray-900">รายการสินค้าของฉัน ({products.length} รายการ)</h2>
             </div>
 
-            {loading ? (
+            {error ? <div role="alert" className="p-6">{error} <button className="underline" onClick={() => setAttempt(value => value + 1)}>ลองอีกครั้ง</button></div> : loading ? (
               <div className="p-20 text-center text-gray-500 font-bold">กำลังโหลดข้อมูลสินค้า...</div>
             ) : products.length === 0 ? (
               <div className="p-20 text-center text-gray-500 font-bold flex flex-col items-center">

@@ -2,7 +2,7 @@
 
 import type { Order, OrderListResponse } from "@/types/api";
 
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback, useRef } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from "next/link";
 
@@ -10,7 +10,13 @@ export default function SellerOrdersPage() {
   const router = useRouter();
   const [orders, setOrders] = useState<Order[]>([]);
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState('');
+  const [attempt, setAttempt] = useState(0);
   const [adminName, setAdminName] = useState('ผู้ขาย');
+  const [page, setPage] = useState(1);
+  const [lastPage, setLastPage] = useState(1);
+  const [total, setTotal] = useState(0);
+  const dialogRef = useRef<HTMLDivElement>(null);
   const [userRole, setUserRole] = useState<string>('');
 
   // สำหรับ Modal ดูรายละเอียดออเดอร์
@@ -19,9 +25,9 @@ export default function SellerOrdersPage() {
   const [statusUpdateLoading, setStatusUpdateLoading] = useState(false);
 
   const fetchOrders = useCallback(async (token: string) => {
-    setLoading(true);
+    setLoading(true); setError('');
     try {
-      const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL || "/api"}/orders`, {
+      const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL || "/api"}/orders?page=${page}`, {
         method: 'GET',
         headers: {
           'Accept': 'application/json',
@@ -35,16 +41,18 @@ export default function SellerOrdersPage() {
         // รองรับ Laravel paginate(20) ที่ข้อมูลจะอยู่ใน data.data
         const orderList = Array.isArray(data) ? data : (data.data || []);
         setOrders(orderList);
+        setLastPage(Array.isArray(data) ? 1 : (data.last_page || 1));
+        setTotal(Array.isArray(data) ? data.length : (data.total || 0));
       } else {
-        setOrders([]);
+        throw new Error('โหลดข้อมูลไม่สำเร็จ กรุณาลองอีกครั้ง');
       }
     } catch (error) {
       console.error('Fetch orders error:', error);
-      setOrders([]);
+      setError('โหลดข้อมูลไม่สำเร็จ กรุณาลองอีกครั้ง');
     } finally {
       setLoading(false);
     }
-  }, []);
+  }, [page]);
 
   useEffect(() => {
     const userString = localStorage.getItem('user');
@@ -61,7 +69,25 @@ export default function SellerOrdersPage() {
     setAdminName(user.name || 'ผู้ขาย');
     setUserRole(user.role);
     fetchOrders(token);
-  }, [router, fetchOrders]);
+  }, [router, fetchOrders, attempt]);
+
+  useEffect(() => {
+    if (!isModalOpen) return;
+    const previous = document.activeElement as HTMLElement | null;
+    const dialog = dialogRef.current;
+    dialog?.focus();
+    const onKey = (event: KeyboardEvent) => {
+      if (event.key === 'Escape') setIsModalOpen(false);
+      if (event.key === 'Tab' && dialog) {
+        const elements = [...dialog.querySelectorAll<HTMLElement>('button:not(:disabled),a[href],input,select,textarea,[tabindex="0"]')];
+        const first = elements[0], last = elements[elements.length - 1];
+        if (event.shiftKey && (document.activeElement === first || document.activeElement === dialog)) { event.preventDefault(); last?.focus(); }
+        else if (!event.shiftKey && (document.activeElement === last || document.activeElement === dialog)) { event.preventDefault(); first?.focus(); }
+      }
+    };
+    document.addEventListener('keydown', onKey);
+    return () => { document.removeEventListener('keydown', onKey); previous?.focus(); };
+  }, [isModalOpen]);
 
   // แปลสถานะให้ตรงกับ OrderController (pending, paid, shipped, completed, cancelled)
   const getStatusDisplay = (status: string | undefined) => {
@@ -162,7 +188,7 @@ export default function SellerOrdersPage() {
       </aside>
 
       {/* Main Content */}
-      <main className="flex-1 flex flex-col h-screen overflow-hidden">
+      <main className="min-w-0 flex-1 flex flex-col h-screen overflow-hidden">
         <header className="bg-white h-16 shadow-sm flex items-center justify-between px-8 shrink-0 border-b border-gray-200 z-10">
           <h1 className="text-xl font-bold text-gray-800">จัดการคำสั่งซื้อ</h1>
           <div className="flex items-center gap-4">
@@ -178,10 +204,10 @@ export default function SellerOrdersPage() {
         <div className="flex-1 overflow-y-auto p-8">
           <div className="bg-white rounded-lg shadow-sm border border-gray-200 overflow-hidden">
             <div className="p-6 border-b border-gray-200 flex justify-between items-center">
-              <h2 className="text-lg font-bold text-gray-900">รายการคำสั่งซื้อทั้งหมด ({orders.length} รายการ)</h2>
+              <h2 className="text-lg font-bold text-gray-900">รายการคำสั่งซื้อทั้งหมด ({total} รายการ)</h2>
             </div>
 
-            {loading ? (
+            {error ? <div role="alert" className="p-6">{error} <button className="underline" onClick={() => setAttempt(value => value + 1)}>ลองอีกครั้ง</button></div> : loading ? (
               <div className="p-20 text-center text-gray-500 font-bold">กำลังโหลดข้อมูลคำสั่งซื้อ...</div>
             ) : orders.length === 0 ? (
               <div className="p-20 text-center text-gray-500 font-bold">ยังไม่มีคำสั่งซื้อในขณะนี้</div>
@@ -232,18 +258,19 @@ export default function SellerOrdersPage() {
               </div>
             )}
           </div>
+          {!loading && !error && <nav aria-label="หน้าคำสั่งซื้อ" className="flex gap-4 my-4"><button disabled={page <= 1} onClick={() => setPage(value => value - 1)}>ก่อนหน้า</button><span>{page} / {lastPage}</span><button disabled={page >= lastPage} onClick={() => setPage(value => value + 1)}>ถัดไป</button></nav>}
         </div>
       </main>
 
       {/* Modal ดูรายละเอียดออเดอร์ */}
       {isModalOpen && selectedOrder && (
         <div className="fixed inset-0 bg-black/60 z-50 flex items-center justify-center p-4 backdrop-blur-sm">
-          <div className="bg-white rounded-lg shadow-xl w-full max-w-2xl max-h-[90vh] overflow-y-auto">
+          <div role="dialog" aria-modal="true" aria-label="รายละเอียดคำสั่งซื้อ" tabIndex={-1} ref={dialogRef} className="bg-white rounded-lg shadow-xl w-full max-w-2xl max-h-[90vh] overflow-y-auto">
             <div className="flex justify-between items-center p-6 border-b border-gray-200 sticky top-0 bg-white">
               <h3 className="text-xl font-bold text-gray-900">
                 รายละเอียดคำสั่งซื้อ <span className="text-[#1B4D3E]">#{selectedOrder.id}</span>
               </h3>
-              <button onClick={() => setIsModalOpen(false)} className="text-gray-400 hover:text-red-500 transition font-bold text-xl">
+              <button aria-label="ปิดรายละเอียดคำสั่งซื้อ" onClick={() => setIsModalOpen(false)} className="text-gray-400 hover:text-red-500 transition font-bold text-xl">
                 ✕
               </button>
             </div>

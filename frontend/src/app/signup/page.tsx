@@ -115,7 +115,7 @@ export default function SignupPage() {
             <h2 className="text-xl text-gray-900 font-bold mb-6">สมัครสมาชิก</h2>
 
             {errorMessage && (
-              <div className="bg-red-50 border-l-4 border-red-500 text-red-700 px-4 py-3 rounded-sm mb-6 text-sm font-medium whitespace-pre-line">
+              <div role="alert" className="bg-red-50 border-l-4 border-red-500 text-red-700 px-4 py-3 rounded-sm mb-6 text-sm font-medium whitespace-pre-line">
                 {errorMessage}
               </div>
             )}
@@ -126,7 +126,7 @@ export default function SignupPage() {
                   type="text"
                   value={firstName}
                   onChange={(e) => setFirstName(e.target.value)}
-                  placeholder="ชื่อจริง"
+                  aria-label="ชื่อจริง" placeholder="ชื่อจริง"
                   required
                   className="w-full px-4 py-3 border border-gray-300 rounded-sm focus:outline-none focus:border-[#1B4D3E] text-sm text-gray-900"
                 />
@@ -134,7 +134,7 @@ export default function SignupPage() {
                   type="text"
                   value={lastName}
                   onChange={(e) => setLastName(e.target.value)}
-                  placeholder="นามสกุล"
+                  aria-label="นามสกุล" placeholder="นามสกุล"
                   required
                   className="w-full px-4 py-3 border border-gray-300 rounded-sm focus:outline-none focus:border-[#1B4D3E] text-sm text-gray-900"
                 />
@@ -144,7 +144,7 @@ export default function SignupPage() {
                 type="email"
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
-                placeholder="อีเมล (Email)"
+                aria-label="อีเมล (Email)" placeholder="อีเมล (Email)"
                 required
                 className="w-full px-4 py-3 border border-gray-300 rounded-sm focus:outline-none focus:border-[#1B4D3E] text-sm text-gray-900"
               />
@@ -153,7 +153,7 @@ export default function SignupPage() {
                 type="password"
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
-                placeholder="รหัสผ่าน (อย่างน้อย 8 ตัวอักษร)"
+                aria-label="รหัสผ่าน (อย่างน้อย 8 ตัวอักษร)" placeholder="รหัสผ่าน (อย่างน้อย 8 ตัวอักษร)"
                 required
                 minLength={8}
                 className="w-full px-4 py-3 border border-gray-300 rounded-sm focus:outline-none focus:border-[#1B4D3E] text-sm text-gray-900"
@@ -163,7 +163,7 @@ export default function SignupPage() {
                 type="password"
                 value={passwordConfirmation}
                 onChange={(e) => setPasswordConfirmation(e.target.value)}
-                placeholder="ยืนยันรหัสผ่านอีกครั้ง"
+                aria-label="ยืนยันรหัสผ่านอีกครั้ง" placeholder="ยืนยันรหัสผ่านอีกครั้ง"
                 required
                 minLength={8}
                 className="w-full px-4 py-3 border border-gray-300 rounded-sm focus:outline-none focus:border-[#1B4D3E] text-sm text-gray-900"
