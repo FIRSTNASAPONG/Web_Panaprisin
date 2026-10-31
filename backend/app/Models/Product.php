@@ -7,6 +7,11 @@ use Illuminate\Database\Eloquent\Model;
 class Product extends Model
 {
     protected $guarded = [];
+    public function scopeWithRatings($query)
+    {
+        return $query->withCount(['reviews as reviews_count' => fn ($q) => $q->published()])
+            ->withAvg(['reviews as average_rating' => fn ($q) => $q->published()], 'rating');
+    }
     public function category() { return $this->belongsTo(Category::class); }
     public function reviews() { return $this->hasMany(Review::class); }
     public function seller()

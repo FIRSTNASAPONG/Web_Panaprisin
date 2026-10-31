@@ -107,6 +107,8 @@ export default function Navbar() {
             
             {user ? (
               <>
+                <Link href="/wishlist" className="hover:underline">รายการโปรด</Link>
+                {user.role === 'admin' && <Link href="/admin">Admin Dashboard</Link>}
                 {user.role === 'buyer' && <Link href="/account" className="hover:underline">บัญชีของฉัน</Link>}
                 <span className="font-bold text-green-200 ml-2">
                   สวัสดี, {user.first_name || user.name || 'ผู้ใช้งาน'}

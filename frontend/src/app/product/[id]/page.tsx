@@ -1,5 +1,7 @@
 "use client";
 
+import ProductReviews from "@/components/ProductReviews";
+import WishlistButton from "@/components/WishlistButton";
 import Image from "next/image";
 import type { Product } from "@/types/api";
 import React, { useState, useEffect } from 'react';
@@ -133,14 +135,14 @@ export default function ProductDetailPage() {
       <main className="container mx-auto px-4 max-w-6xl flex-grow mb-8">
         <div className="bg-white rounded-sm shadow-sm p-6 mb-4">
           <div className="flex flex-col md:flex-row gap-8">
-            
+
             {/* Left: Images */}
             <div className="w-full md:w-2/5 shrink-0">
               <div className="aspect-square w-full bg-gray-100 mb-4 border border-gray-200 relative">
                 <Image unoptimized loading="eager" width={600} height={600}
                   src={getProductImageUrl(product.image_url || product.image)}
-                  alt={product.name} 
-                  className="w-full h-full object-cover" 
+                  alt={product.name}
+                  className="w-full h-full object-cover"
                   onError={(e) => { e.currentTarget.src = '/image_289eb4.jpg' }}
                 />
                 {isOutOfStock && (
@@ -154,22 +156,12 @@ export default function ProductDetailPage() {
             {/* Right: Product Info */}
             <div className="w-full md:w-3/5 flex flex-col">
               <h1 className="text-xl md:text-2xl font-medium text-gray-900 mb-3">{product.name}</h1>
-              
-              <div className="flex items-center gap-4 text-sm mb-4">
-                <div className="flex items-center text-[#1B4D3E] font-medium border-b border-[#1B4D3E]">
-                  <span className="mr-1">{product.rating ? Number(product.rating).toFixed(1) : '5.0'}</span>
-                  <div className="flex">
-                    {[1, 2, 3, 4, 5].map((star) => (
-                      <svg key={star} xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="currentColor" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="text-[#1B4D3E]"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg>
-                    ))}
-                  </div>
-                </div>
-                <div className="border-l border-gray-300 h-4"></div>
-                <div><span className="border-b border-gray-900 font-medium">{product.reviews || 0}</span> <span className="text-gray-500">เรตติ้ง</span></div>
-                <div className="border-l border-gray-300 h-4"></div>
-                <div><span className="font-medium text-gray-900">{product.sold || 0}</span> <span className="text-gray-500">ขายแล้ว</span></div>
-              </div>
 
+              <p className="text-[#1B4D3E] mb-4" data-testid="product-rating">
+                {product.average_rating == null ? 'ยังไม่มีรีวิว' : `${Number(product.average_rating).toFixed(1)} / 5 ★ (${product.reviews_count} รีวิว)`}
+              </p>
+
+              <WishlistButton productId={product.id} />
               <div className="bg-gray-50 py-4 px-5 mb-6 flex items-end gap-3">
                 <span className="text-[#1B4D3E] text-3xl font-medium">฿{Number(product.price || 0).toLocaleString()}</span>
               </div>
@@ -178,24 +170,24 @@ export default function ProductDetailPage() {
                 <span className="text-gray-500 w-16">จำนวน</span>
                 <div className="flex items-center">
                   <div className="flex border border-gray-300 rounded-sm overflow-hidden h-8">
-                    <button 
+                    <button
                       type="button"
                       disabled={isOutOfStock || quantity <= 1}
-                      onClick={handleDecrease} 
+                      onClick={handleDecrease}
                       className="w-8 flex items-center justify-center hover:bg-gray-100 border-r border-gray-300 text-gray-600 transition disabled:opacity-40"
                     >
                       <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M5 12h14"/></svg>
                     </button>
-                    <input 
-                      type="text" 
-                      value={isOutOfStock ? 0 : quantity} 
+                    <input
+                      type="text"
+                      value={isOutOfStock ? 0 : quantity}
                       readOnly
                       className="w-12 text-center text-gray-900 focus:outline-none bg-white"
                     />
-                    <button 
+                    <button
                       type="button"
                       disabled={isOutOfStock || quantity >= maxStock}
-                      onClick={handleIncrease} 
+                      onClick={handleIncrease}
                       className="w-8 flex items-center justify-center hover:bg-gray-100 border-l border-gray-300 text-gray-600 transition disabled:opacity-40"
                     >
                       <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M5 12h14"/><path d="M12 5v14"/></svg>
@@ -208,7 +200,7 @@ export default function ProductDetailPage() {
               </div>
 
               <div className="flex gap-4 mt-auto pt-4">
-                <button 
+                <button
                   type="button"
                   disabled={isOutOfStock || isAdding}
                   onClick={() => handleAddToCart(false)}
@@ -221,7 +213,7 @@ export default function ProductDetailPage() {
                   <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="8" cy="21" r="1"/><circle cx="19" cy="21" r="1"/><path d="M2.05 2.05h2l2.66 12.42a2 2 0 0 0 2 1.58h9.78a2 2 0 0 0 1.95-1.57l1.65-7.43H5.12"/><path d="M12 9v6"/><path d="M9 12h6"/></svg>
                   {isAdding ? 'กำลังเพิ่ม...' : 'เพิ่มไปยังรถเข็น'}
                 </button>
-                <button 
+                <button
                   type="button"
                   disabled={isOutOfStock || isAdding}
                   onClick={() => handleAddToCart(true)}
@@ -246,7 +238,7 @@ export default function ProductDetailPage() {
             </div>
             <div>
               <h3 className="font-medium text-gray-900 text-lg">พณาไพรสิน</h3>
-              <p className="text-sm text-gray-500 mb-1">Active เมื่อ 5 นาทีที่ผ่านมา</p>
+
               <div className="flex gap-2">
                 <Link href="/" className="flex items-center gap-1 border border-gray-300 text-gray-600 px-3 py-1 text-xs rounded-sm hover:bg-gray-50 transition">
                   ดูร้านค้า
@@ -263,6 +255,7 @@ export default function ProductDetailPage() {
             {product.description || 'ไม่มีรายละเอียดสินค้าเพิ่มเติม'}
           </div>
         </div>
+        <ProductReviews productId={product.id} />
       </main>
 
       <Footer />

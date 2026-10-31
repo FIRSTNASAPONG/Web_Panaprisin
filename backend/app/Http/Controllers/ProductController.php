@@ -10,7 +10,7 @@ class ProductController extends Controller
 {
     public function index()
     {
-        return response()->json(Product::where('is_active', true)->get());
+        return response()->json(Product::withRatings()->where('is_active', true)->get());
     }
 
     public function mine(Request $request)
@@ -77,7 +77,7 @@ class ProductController extends Controller
 
     public function show(int $id)
     {
-        return response()->json(Product::where('is_active', true)->findOrFail($id));
+        return response()->json(Product::withRatings()->where('is_active', true)->findOrFail($id));
     }
 
     public function destroy(int $id, Request $request)

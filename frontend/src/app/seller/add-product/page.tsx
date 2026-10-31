@@ -78,13 +78,17 @@ export default function AddProductPage() {
 
   useEffect(() => {
     if (!editId) return;
-    api.get<Product>(`/products/${encodeURIComponent(editId)}`).then(({ data }) => {
+    const controller = new AbortController();
+    setProductReady(false);
+    api.get<Product>(`/products/${encodeURIComponent(editId)}`, { signal: controller.signal }).then(({ data }) => {
+      if (controller.signal.aborted) return;
       setName(data.name); setCategory(String(data.category_id));
       setDescription(data.description || ''); setPrice(String(data.price));
       setStock(String(data.stock_quantity));
       if (data.image_url) setImagePreview(getProductImageUrl(data.image_url));
       setProductReady(true);
-    }).catch((error: unknown) => setErrorMessage(apiErrorMessage(error)));
+    }).catch((error: unknown) => { if (!controller.signal.aborted) setErrorMessage(apiErrorMessage(error)); });
+    return () => controller.abort();
   }, [editId]);
 
   const handleImageChange = (e: React.ChangeEvent<HTMLInputElement>) => {

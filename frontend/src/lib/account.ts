@@ -9,7 +9,7 @@ export function errorMessage(error: unknown): string {
   if (axios.isAxiosError<ApiError>(error)) {
     if (error.response?.status === 401) return 'กรุณาเข้าสู่ระบบเพื่อดำเนินการต่อ';
     if (error.response?.status === 403) return 'บัญชีนี้ไม่มีสิทธิ์เข้าถึง';
-    if (error.response?.status === 404) return 'ไม่พบคำสั่งซื้อ หรือคุณไม่มีสิทธิ์เข้าถึง';
+    if (error.response?.status === 404) return 'ไม่พบคำสั่งซื้อหรือข้อมูลที่ร้องขอ หรือคุณไม่มีสิทธิ์เข้าถึง';
     const errors = error.response?.data.errors;
     return errors ? Object.values(errors).flat().join('\n') : error.response?.data.message || 'ไม่สามารถเชื่อมต่อเซิร์ฟเวอร์ กรุณาลองอีกครั้ง';
   }

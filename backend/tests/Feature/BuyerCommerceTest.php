@@ -107,6 +107,8 @@ class BuyerCommerceTest extends TestCase
         $this->postJson('/api/checkout', $this->payload())->assertForbidden();
         Sanctum::actingAs(User::factory()->create(['role' => 'admin']));
         $this->getJson('/api/orders')->assertOk();
+        $this->putJson("/api/orders/$id/status", ['order_status' => 'shipped'])->assertUnprocessable();
+        $this->postJson("/api/admin/orders/$id/confirm-payment", ['confirmed' => true, 'reference' => 'TEST bank receipt'])->assertOk();
         $this->putJson("/api/orders/$id/status", ['order_status' => 'shipped'])->assertOk();
         Sanctum::actingAs($buyer);
         $this->getJson('/api/me')->assertJsonPath('shipping_orders', 1);

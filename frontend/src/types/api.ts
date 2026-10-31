@@ -25,6 +25,8 @@ export interface Product {
   // Optional legacy/display fields; current ProductController does not add these.
   image?: string | null;
   stock?: number;
+  average_rating?: Decimal | null;
+  reviews_count?: number;
   rating?: Decimal;
   reviews?: number;
   sold?: number;

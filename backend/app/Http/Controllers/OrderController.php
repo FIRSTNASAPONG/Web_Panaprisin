@@ -194,13 +194,27 @@ class OrderController extends Controller
         $validated = $request->validate([
             'order_status' => 'required|in:pending,paid,shipped,completed,cancelled'
         ]);
-        $order = Order::findOrFail($id);
-        $order->update([
-            'order_status' => $validated['order_status']
-        ]);
-        return response()->json([
-            'message' => 'อัปเดตสถานะคำสั่งซื้อสำเร็จ',
-            'order' => $order
-        ]);
+        return DB::transaction(function () use ($id, $validated) {
+            $order = Order::whereKey($id)->lockForUpdate()->firstOrFail();
+            $target = $validated['order_status'];
+            if ($order->order_status === $target) {
+                return response()->json(['order' => $order]);
+            }
+            $transitions = ['pending' => ['cancelled'], 'paid' => ['shipped'], 'shipped' => ['completed'], 'completed' => [], 'cancelled' => []];
+            abort_unless(in_array($target, $transitions[$order->order_status] ?? [], true), 422, 'เปลี่ยนสถานะไม่ได้: ต้องยืนยันการชำระเงินจริงก่อน และดำเนินการตามลำดับ');
+            $payment = $order->payment()->lockForUpdate()->first();
+            if ($target === 'cancelled') {
+                abort_if($payment && $payment->payment_status === 'completed', 422, 'รายการชำระแล้วต้องใช้กระบวนการคืนเงิน');
+                foreach ($order->items()->orderBy('product_id')->get() as $item) {
+                    Product::whereKey($item->product_id)->increment('stock_quantity', $item->quantity);
+                }
+                $payment?->update(['payment_status' => 'failed']);
+            } else {
+                abort_unless($payment && $payment->payment_status === 'completed' && $payment->paid_at
+                    && bccomp((string) $payment->amount, (string) $order->total_amount, 2) === 0, 422, 'ยังไม่มีการชำระเงินครบ');
+            }
+            $order->update(['order_status' => $target]);
+            return response()->json(['message' => 'อัปเดตสถานะคำสั่งซื้อสำเร็จ', 'order' => $order]);
+        });
     }
 }

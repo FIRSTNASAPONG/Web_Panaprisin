@@ -20,3 +20,16 @@
 | POST/PUT/DELETE /cart | 401 | owner | add denied | add denied | quantity/stock validation; legacy GET cart available all logged-in roles |
 
 Checkout computes price from DB; ignores submitted totals/payment status. Locks buyer then cart then products in ID order; unique(user_id,idempotency_key) is final database constraint. Retry with identical key/address/method returns same order even after cart emptied. A key identifies a checkout attempt, not a mutable cart; UI keeps original payload after uncertain failures. New order item product_name preserves purchased names; old null snapshots are filled before product edit.
+
+## เพิ่มเติม 31 ตุลาคม 2026
+
+| API | สิทธิ์ |
+|---|---|
+| GET /wishlist; PUT/DELETE /wishlist/{productId} | Sanctum ทุก role, ข้อมูลตนเองเท่านั้น |
+| GET /products/{id}/reviews | สาธารณะ เฉพาะ approved + verified purchase |
+| POST /products/{id}/reviews | Buyer ที่ซื้อ completed และจ่ายครบ; user_id/status จาก client ใช้ไม่ได้ |
+| /admin/* | Sanctum + IsAdmin ทุก endpoint; รายละเอียดใน requirements-phase-report.md |
+| PUT /orders/{id}/status | Admin; state machine; paid ต้องผ่าน confirm-payment |
+| GET /reports/sales | Admin ทั้งระบบ / Seller สินค้าตน; Buyer 403 |
+
+Admin role ไม่สามารถสร้างผ่าน register/update API; user profile ไม่รับ role; Admin เปลี่ยน role ตนเองไม่ได้และเปลี่ยนบัญชี Admin ไม่ได้

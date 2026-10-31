@@ -39,6 +39,9 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::get('/me/orders', [\App\Http\Controllers\BuyerAccountController::class, 'orders']);
     Route::get('/me/orders/{id}', [\App\Http\Controllers\BuyerAccountController::class, 'order'])->whereNumber('id');
     Route::patch('/user', [\App\Http\Controllers\BuyerAccountController::class, 'updateProfile']);
+    Route::get('/wishlist', [\App\Http\Controllers\WishlistController::class, 'index']);
+    Route::put('/wishlist/{productId}', [\App\Http\Controllers\WishlistController::class, 'store'])->whereNumber('productId');
+    Route::delete('/wishlist/{productId}', [\App\Http\Controllers\WishlistController::class, 'destroy'])->whereNumber('productId');
     //products
     Route::get('/me/products', [ProductController::class, 'mine']);
     Route::match(['put', 'patch'], '/products/{id}', [ProductController::class, 'update'])->whereNumber('id');
@@ -61,24 +64,20 @@ Route::middleware('auth:sanctum')->group(function () {
 });
 
 Route::middleware(['auth:sanctum', IsAdmin::class])->group(function () {
-   
-    // แอดมินอนุมัติรีวิว
-    Route::put('/admin/reviews/{id}/approve', function ($id) {
-        App\Models\Review::where('id', $id)->update(['status' => 'approved']);
-        return response()->json(['message' => 'อนุมัติรีวิวสำเร็จ']);
-    });
-    //ดึงusersทั้งหมด
-    Route::get('/admin/users', function () {
-        return response()->json(App\Models\User::all());
-    });
-    // ลบผูuser
-    Route::delete('/admin/users/{id}', function ($id) {
-        App\Models\User::destroy($id);
-        return response()->json(['message' => 'ลบผู้ใช้งานสำเร็จ']);
-    });
-    Route::put('/orders/{id}/status', [
-        OrderController::class,
-        'updateStatus'
-    ]);
+    $admin = \App\Http\Controllers\AdminController::class;
+    Route::get('/admin/overview', [$admin, 'overview']);
+    Route::get('/admin/users', [$admin, 'users']);
+    Route::patch('/admin/users/{id}', [$admin, 'updateUser'])->whereNumber('id');
+    Route::delete('/admin/users/{id}', [$admin, 'destroyUser'])->whereNumber('id');
+    Route::get('/admin/products', [$admin, 'products']);
+    Route::post('/admin/products', [ProductController::class, 'store']);
+    Route::patch('/admin/products/{id}', [ProductController::class, 'update'])->whereNumber('id');
+    Route::delete('/admin/products/{id}', [ProductController::class, 'destroy'])->whereNumber('id');
+    Route::get('/admin/orders', [OrderController::class, 'index']);
+    Route::put('/admin/orders/{id}/status', [OrderController::class, 'updateStatus'])->whereNumber('id');
+    Route::post('/admin/orders/{id}/confirm-payment', [$admin, 'confirmPayment'])->whereNumber('id');
+    Route::get('/admin/reviews', [$admin, 'reviews']);
+    Route::patch('/admin/reviews/{id}', [$admin, 'moderateReview'])->whereNumber('id');
+    Route::put('/admin/reviews/{id}/approve', [$admin, 'approveReview'])->whereNumber('id');
+    Route::put('/orders/{id}/status', [OrderController::class, 'updateStatus'])->whereNumber('id');
 });
-

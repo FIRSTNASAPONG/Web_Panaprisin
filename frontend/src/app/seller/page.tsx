@@ -18,19 +18,21 @@ export default function SellerCentrePage() {
     outOfStockProducts: 0
   });
 
+  const [error, setError] = useState('');
   const [recentOrders, setRecentOrders] = useState<Order[]>([]);
 
   const fetchDashboardData = useCallback(async (token: string, currentUser: User) => {
-    setLoading(true);
+    setLoading(true); setError('');
     try {
       const headers = {
         'Accept': 'application/json',
         'Authorization': `Bearer ${token}`
       };
 
-      const [productsRes, ordersRes] = await Promise.all([
-        fetch(`${process.env.NEXT_PUBLIC_API_URL || "/api"}/products`, { headers, cache: 'no-store' }),
-        fetch(`${process.env.NEXT_PUBLIC_API_URL || "/api"}/orders`, { headers, cache: 'no-store' })
+      const [productsRes, ordersRes, reportRes] = await Promise.all([
+        fetch(`${process.env.NEXT_PUBLIC_API_URL || "/api"}/me/products`, { headers, cache: 'no-store' }),
+        fetch(`${process.env.NEXT_PUBLIC_API_URL || "/api"}/orders`, { headers, cache: 'no-store' }),
+        fetch(`${process.env.NEXT_PUBLIC_API_URL || "/api"}/reports/sales`, { headers, cache: 'no-store' })
       ]);
 
       let myProducts: Product[] = [];
@@ -55,10 +57,9 @@ export default function SellerCentrePage() {
       const outOfStock = myProducts.filter((p) => Number(p.stock_quantity ?? p.stock ?? 0) <= 0).length;
       const pendingOrds = myOrders.filter((o) => (o.status || o.order_status) === 'pending').length;
       
-      const todayStr = new Date().toISOString().split('T')[0];
-      const todaySalesAmount = myOrders
-        .filter((o) => o.created_at && String(o.created_at).startsWith(todayStr) && (o.status || o.order_status) !== 'cancelled')
-        .reduce((sum, o) => sum + Number(o.total_amount || 0), 0);
+      if (!productsRes.ok || !ordersRes.ok || !reportRes.ok) throw new Error('โหลดข้อมูลไม่สำเร็จ');
+      const report = await reportRes.json();
+      const todaySalesAmount = Number(report.total_revenue);
 
       setStats({
         todaySales: todaySalesAmount,
@@ -70,6 +71,7 @@ export default function SellerCentrePage() {
       setRecentOrders(myOrders.slice(0, 5));
     } catch (error) {
       console.error('Error fetching dashboard data:', error);
+      setError('โหลดข้อมูลไม่สำเร็จ กรุณาลองโหลดหน้าใหม่');
     } finally {
       setLoading(false);
     }
@@ -107,6 +109,7 @@ export default function SellerCentrePage() {
 
         <nav className="flex-1 py-4">
           <ul className="space-y-1">
+            <li><Link href="/seller/reports" className="block px-6 py-3">รายงานยอดขาย</Link></li>
             <li>
               <Link href="/seller" className="flex items-center gap-3 px-6 py-3 bg-white/10 border-l-4 border-white text-white font-medium">
                 แดชบอร์ด
@@ -152,6 +155,7 @@ export default function SellerCentrePage() {
         </header>
 
         <div className="flex-1 overflow-y-auto p-8">
+          {error && <p role="alert" className="text-red-700">{error}</p>}
           {loading ? (
             <div className="text-center p-20 text-gray-500 font-bold">กำลังโหลดข้อมูลแดชบอร์ด...</div>
           ) : (
@@ -162,7 +166,7 @@ export default function SellerCentrePage() {
                     <svg xmlns="http://www.w3.org/2000/svg" width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M12 2v20"/><path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/></svg>
                   </div>
                   <div>
-                    <p className="text-sm text-gray-500 font-medium mb-1">ยอดขายวันนี้</p>
+                    <p className="text-sm text-gray-500 font-medium mb-1">ยอดขายรับชำระทั้งหมด</p>
                     <h3 className="text-2xl font-bold text-[#1B4D3E]">฿{stats.todaySales.toLocaleString()}</h3>
                   </div>
                 </div>
@@ -175,7 +179,7 @@ export default function SellerCentrePage() {
                     <svg xmlns="http://www.w3.org/2000/svg" width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M6 2 3 6v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V6l-3-4Z"/><path d="M3 6h18"/><path d="M16 10a4 4 0 0 1-8 0"/></svg>
                   </div>
                   <div>
-                    <p className="text-sm text-gray-500 font-medium mb-1">คำสั่งซื้อรอดำเนินการ</p>
+                    <p className="text-sm text-gray-500 font-medium mb-1">รอดำเนินการ (20 รายการล่าสุด)</p>
                     <h3 className="text-2xl font-bold text-gray-900">{stats.pendingOrders}</h3>
                   </div>
                 </div>
