@@ -79,6 +79,9 @@ export type ProductListResponse = Product[] | { data?: Product[]; products?: Pro
 export type OrderListResponse = Order[] | { data?: Order[] };
 
 export interface Payment {
+  paid_at?: string | null;
+  verified_by?: number | null;
+  verification_reference?: string | null;
   payment_method: 'promptpay' | 'bank_transfer' | 'credit_card';
   payment_status: 'pending' | 'completed' | 'failed';
   amount: Decimal;
