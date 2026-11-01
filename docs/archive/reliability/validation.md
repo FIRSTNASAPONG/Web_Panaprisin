@@ -1,3 +1,5 @@
+> หลักฐานต้นฉบับย้อนหลัง: ไม่ใช่ผลทดสอบรอบปัจจุบัน โปรดใช้ [Final Project Documentation v1.0](../../README.md)
+
 # รายงาน Quality / Reliability / Security — 31 ตุลาคม 2026
 
 เริ่ม Audit จาก main `05d9165` และ fetch ซ้ำก่อนส่งมอบพบ main ขยับเป็น `fad3f99` ซึ่งเป็น commit Phase 1 เดียวกับฐานของงานนี้ จึงไม่มีความต่างใหม่ที่ต้องรวม ผู้ดำเนินงานไม่ได้ push main, merge, deploy, restart Azure, แก้ secrets หรือแตะ production database
@@ -32,11 +34,11 @@ Root cause: failed cart delete ทำให้ UI ลบสินค้าทั
 
 ไฟล์: `frontend/src/context/CartContext.tsx`, `components/{Navbar,ProductGrid}.tsx`, `app/{cart,login,signup}/page.tsx`, `app/product/[id]/page.tsx`, `app/seller/{layout,add-product/page,orders/page,products/page}.tsx`, types และ browser tests. แก้ loading/error/retry, mutation state ตาม server, category จาก DB, labels, modal focus/Escape และ pagination โดยคง theme #1B4D3E, branding, Navbar/Footer และ Seller Centre
 
-ผล: audit 24 routes × desktop1280/mobile390 = 48 checks ผ่าน ไม่มี horizontal overflow, unnamed visible controls หรือ uncaught pageerror ตาม checks ที่กำหนด ดู [audit.json](../evidence/quality/audit.json). ไม่ใช่การรับรอง WCAG ทั้งหมดหรือ visual pixel comparison. baseline audit มี false positives ของ controls ใน details ที่ปิดอยู่ จึงแก้ visibility filter ก่อนผลสุดท้าย
+ผล: audit 24 routes × desktop1280/mobile390 = 48 checks ผ่าน ไม่มี horizontal overflow, unnamed visible controls หรือ uncaught pageerror ตาม checks ที่กำหนด ดู [audit.json](../../evidence/quality/audit.json). ไม่ใช่การรับรอง WCAG ทั้งหมดหรือ visual pixel comparison. baseline audit มี false positives ของ controls ใน details ที่ปิดอยู่ จึงแก้ visibility filter ก่อนผลสุดท้าย
 
 ## Phase 5 — Database / Documentation
 
-อัปเดต [ER/EER](../er-eer.md) ตาม migration จริง เพิ่ม `DatabaseIntegrityTest.php` ตรวจ unique/FK และ migration ปฏิเสธ legacy duplicate โดยไม่เปลี่ยนแถว (2 tests ผ่านทั้ง PostgreSQL/SQLite). ไม่มี migration ใหม่เพิ่มเติมใน Phase นี้ และไม่มี Reviews/Sales Report API ซ้ำ ดู [Demo script](demo-script.md)
+อัปเดต [ER/EER](../../er-eer.md) ตาม migration จริง เพิ่ม `DatabaseIntegrityTest.php` ตรวจ unique/FK และ migration ปฏิเสธ legacy duplicate โดยไม่เปลี่ยนแถว (2 tests ผ่านทั้ง PostgreSQL/SQLite). ไม่มี migration ใหม่เพิ่มเติมใน Phase นี้ และไม่มี Reviews/Sales Report API ซ้ำ ดู [Demo script](../../presentation-guide.md)
 
 ## Phase 6 — หลักฐาน validation
 
@@ -57,6 +59,6 @@ Root cause: failed cart delete ทำให้ UI ลบสินค้าทั
 
 Browser ใช้ Chromium กับ Next dev :3100 และ Laravel :8091, isolated PostgreSQL `panaprisin_ecommerce_test`; ไม่ได้รัน browser against production build หรือ Azure. Backend tests รันหลัง browser จบเพื่อไม่ reset fixtures ระหว่าง E2E. Test fixtures เป็นแถวจริงใน test DB ไม่ใช่ mock endpoint. Intentional network abort อาจทำให้ Next dev แสดง issue badge ใน screenshot; ไม่มี uncaught pageerror ไม่ได้แปลว่า console ไร้ expected network error
 
-ภาพจริง: [Seller mobile](../evidence/quality/seller-mobile.png), [Admin orders](../evidence/quality/admin-orders-desktop.png), [Wishlist](../evidence/quality/requirements/requirements-wishlist-mobile.png), [Approved review](../evidence/quality/requirements/requirements-approved-review.png), [Admin sales](../evidence/quality/requirements/requirements-admin-report.png), [Seller sales](../evidence/quality/requirements/requirements-seller-report-mobile.png), [Buyer checkout](../evidence/quality/regression/buyer-confirmation-desktop.png)
+ภาพจริง: [Seller mobile](../../evidence/quality/seller-mobile.png), [Admin orders](../../evidence/quality/admin-orders-desktop.png), [Wishlist](../../evidence/quality/requirements/requirements-wishlist-mobile.png), [Approved review](../../evidence/quality/requirements/requirements-approved-review.png), [Admin sales](../../evidence/quality/requirements/requirements-admin-report.png), [Seller sales](../../evidence/quality/requirements/requirements-seller-report-mobile.png), [Buyer checkout](../../evidence/quality/regression/buyer-confirmation-desktop.png)
 
 Branches เป็น stacked commits: reliability `fad3f99` → commerce `5683446` → security `4da9e56` → UX/validation. Security ควร review เฉพาะ diff กับ commerce branch และ retarget หลังฐานรวมแล้ว ห้าม merge/deploy โดยอัตโนมัติ ยังไม่อ้างว่า remote CI ของแต่ละ feature branch ผ่าน

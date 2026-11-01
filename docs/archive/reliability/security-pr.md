@@ -1,3 +1,5 @@
+> หลักฐานต้นฉบับย้อนหลัง: ไม่ใช่ผลทดสอบรอบปัจจุบัน โปรดใช้ [Final Project Documentation v1.0](../../README.md)
+
 # Security PR — OAuth state, credential preservation and explicit Bearer authentication
 
 Branch: `feature/security-oauth-hardening`; stacked base: `feature/commerce-integrity-hardening`. Review this diff separately from reliability/UX. Do not merge or deploy automatically.

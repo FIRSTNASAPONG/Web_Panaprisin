@@ -1,3 +1,5 @@
+> หลักฐานต้นฉบับย้อนหลัง: ไม่ใช่เอกสารนำเสนอฉบับปัจจุบัน เนื้อหาบางส่วนถูกแทนที่ โปรดใช้ [Final Project Documentation v1.0](../README.md)
+
 # Test evidence — 18 October 2026
 
 ## Automated backend
@@ -26,10 +28,10 @@ Script creates users through real register API and products/cart/orders through 
 Covered: guest unauthorized account, empty orders, profile save + DB check, real checkout, accurate total, pending payment, stock decrement, DB cart clearing, confirmation refresh, overview/orders/detail navigation, foreign buyer confirmation denied, real network-offline error, seller edit + original order name preserved, no browser pageerror. เพิ่มกรณี API สร้างออเดอร์จริงแล้วตัด response: reload → retry payload เดิม → ได้ order_id เดิม, จำนวนออเดอร์ยังเท่าเดิมและ stock ไม่ถูกตัดซ้ำ ผ่านแล้ว. 390×844 mobile account has no horizontal overflow; desktop confirmation at 1280×900. Screenshots visually inspected.
 
 Artifacts:
-- [Buyer confirmation desktop](evidence/buyer-confirmation-desktop.png)
-- [Buyer account mobile](evidence/buyer-account-mobile.png)
+- [Buyer confirmation desktop](../evidence/buyer-confirmation-desktop.png)
+- [Buyer account mobile](../evidence/buyer-account-mobile.png)
 
-The browser test initially failed: account hydration overwrote typed checkout phone; seller editor accepted input before async data arrived. Fixed by waiting for account hydration with request cancellation and disabling seller fields during load. Rerun passed. มี [ภาพก่อนแก้ checkout hydration race](evidence/before-fix-checkout-hydration.png) จาก browser test ที่ fail จริง; ไม่มีภาพ baseline main ก่อนเริ่มงาน จึงไม่อ้างว่าเป็นภาพก่อน upgrade ทั้งระบบ.
+The browser test initially failed: account hydration overwrote typed checkout phone; seller editor accepted input before async data arrived. Fixed by waiting for account hydration with request cancellation and disabling seller fields during load. Rerun passed. มี [ภาพก่อนแก้ checkout hydration race](../evidence/before-fix-checkout-hydration.png) จาก browser test ที่ fail จริง; ไม่มีภาพ baseline main ก่อนเริ่มงาน จึงไม่อ้างว่าเป็นภาพก่อน upgrade ทั้งระบบ.
 
 Reproduction (temporary installed module path varies):
 ```sh

@@ -1,3 +1,5 @@
+> หลักฐานต้นฉบับย้อนหลัง: ไม่ใช่ผลทดสอบรอบปัจจุบัน โปรดใช้ [Final Project Documentation v1.0](../../README.md)
+
 # Phase 1 — Azure deployment failure / safe patch proposal
 
 Evidence: [run 41189371948](https://github.com/FIRSTNASAPONG/Web_Panaprisin/actions/runs/41189371948), job 124502783091, 2026-10-31 09:36–09:41 UTC, SHA `05d91653bde01198b7df9543bb51139dabfc37d0`.

@@ -1,0 +1,153 @@
+{
+  "checkedAt": "2026-11-01T03:39:42.888Z",
+  "mode": "anonymous read-only; navigation only",
+  "results": [
+    {
+      "path": "/",
+      "status": 200,
+      "finalPath": "/",
+      "screenshot": "home.png"
+    },
+    {
+      "path": "/login",
+      "status": 200,
+      "finalPath": "/login",
+      "screenshot": "login.png"
+    },
+    {
+      "path": "/signup",
+      "status": 200,
+      "finalPath": "/signup",
+      "screenshot": "signup.png"
+    },
+    {
+      "path": "/cart",
+      "status": 200,
+      "finalPath": "/cart",
+      "screenshot": "cart.png"
+    },
+    {
+      "path": "/wishlist",
+      "status": 200,
+      "finalPath": "/wishlist",
+      "screenshot": "wishlist.png"
+    },
+    {
+      "path": "/checkout",
+      "status": 200,
+      "finalPath": "/checkout",
+      "screenshot": "checkout.png"
+    },
+    {
+      "path": "/checkout/success",
+      "status": 200,
+      "finalPath": "/checkout/success",
+      "screenshot": "checkout-success.png"
+    },
+    {
+      "path": "/account",
+      "status": 200,
+      "finalPath": "/account",
+      "screenshot": "account.png"
+    },
+    {
+      "path": "/account/orders",
+      "status": 200,
+      "finalPath": "/account/orders",
+      "screenshot": "account-orders.png"
+    },
+    {
+      "path": "/account/profile",
+      "status": 200,
+      "finalPath": "/account/profile",
+      "screenshot": "account-profile.png"
+    },
+    {
+      "path": "/seller",
+      "status": 200,
+      "finalPath": "/seller",
+      "screenshot": "seller.png"
+    },
+    {
+      "path": "/seller/products",
+      "status": 200,
+      "finalPath": "/seller/products",
+      "screenshot": "seller-products.png"
+    },
+    {
+      "path": "/seller/add-product",
+      "status": 200,
+      "finalPath": "/seller/add-product",
+      "screenshot": "seller-add-product.png"
+    },
+    {
+      "path": "/seller/orders",
+      "status": 200,
+      "finalPath": "/seller/orders",
+      "screenshot": "seller-orders.png"
+    },
+    {
+      "path": "/seller/reports",
+      "status": 200,
+      "finalPath": "/seller/reports",
+      "screenshot": "seller-reports.png"
+    },
+    {
+      "path": "/admin",
+      "status": 200,
+      "finalPath": "/admin",
+      "screenshot": "admin.png"
+    },
+    {
+      "path": "/admin/users",
+      "status": 200,
+      "finalPath": "/admin/users",
+      "screenshot": "admin-users.png"
+    },
+    {
+      "path": "/admin/products",
+      "status": 200,
+      "finalPath": "/admin/products",
+      "screenshot": "admin-products.png"
+    },
+    {
+      "path": "/admin/orders",
+      "status": 200,
+      "finalPath": "/admin/orders",
+      "screenshot": "admin-orders.png"
+    },
+    {
+      "path": "/admin/reviews",
+      "status": 200,
+      "finalPath": "/admin/reviews",
+      "screenshot": "admin-reviews.png"
+    },
+    {
+      "path": "/admin/reports",
+      "status": 200,
+      "finalPath": "/admin/reports",
+      "screenshot": "admin-reports.png"
+    },
+    {
+      "path": "/product/3",
+      "status": 200,
+      "screenshot": "product.png"
+    },
+    {
+      "path": "/up",
+      "status": 200
+    },
+    {
+      "path": "/api/products",
+      "status": 200
+    },
+    {
+      "path": "/api/categories",
+      "status": 200
+    },
+    {
+      "path": "/api/user",
+      "status": 500
+    }
+  ]
+}

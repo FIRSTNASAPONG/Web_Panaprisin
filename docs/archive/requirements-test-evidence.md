@@ -1,3 +1,5 @@
+> หลักฐานต้นฉบับย้อนหลัง: ไม่ใช่เอกสารนำเสนอฉบับปัจจุบัน เนื้อหาบางส่วนถูกแทนที่ โปรดใช้ [Final Project Documentation v1.0](../README.md)
+
 # หลักฐานทดสอบ Requirement — 31 ตุลาคม 2026
 
 Branch `feature/wishlist-reviews-admin-sales`, base `origin/main` = `3b6b6f8` ตรวจจริงใน local workspace ไม่มี production deploy
@@ -48,18 +50,18 @@ Browser regression เดิม: checkout/profile/order ownership/lost-response 
 1. TypeScript null product ใน loading/not-found branch
 2. label คะแนนรวม option text ทำให้ exact accessible label ไม่ตรง เพิ่ม aria-label
 3. Admin category defaultValue ก่อนโหลด options ทำให้ค่าหาย เปลี่ยนเป็น controlled select
-4. Seller editor มี late response เขียนทับค่าที่พิมพ์ เพิ่ม cancellation; เก็บ [ภาพ fail จริง](evidence/browser-failure.png) แล้ว rerun ผ่าน
+4. Seller editor มี late response เขียนทับค่าที่พิมพ์ เพิ่ม cancellation; เก็บ [ภาพ fail จริง](../evidence/browser-failure.png) แล้ว rerun ผ่าน
 
 ภาพที่ตรวจด้วยสายตาแล้ว:
-- [Wishlist mobile](evidence/requirements-wishlist-mobile.png)
-- [Approved review](evidence/requirements-approved-review.png)
-- [Admin dashboard](evidence/requirements-admin-dashboard.png)
-- [Admin report](evidence/requirements-admin-report.png)
-- [Seller report mobile](evidence/requirements-seller-report-mobile.png)
+- [Wishlist mobile](../evidence/requirements-wishlist-mobile.png)
+- [Approved review](../evidence/requirements-approved-review.png)
+- [Admin dashboard](../evidence/requirements-admin-dashboard.png)
+- [Admin report](../evidence/requirements-admin-report.png)
+- [Seller report mobile](../evidence/requirements-seller-report-mobile.png)
 
 ภาพ regression รอบนี้แยกจากหลักฐานวันที่ 18 ต.ค.:
-- [Checkout](evidence/requirements-regression-buyer-confirmation-desktop.png)
-- [Account mobile](evidence/requirements-regression-buyer-account-mobile.png)
+- [Checkout](../evidence/requirements-regression-buyer-confirmation-desktop.png)
+- [Account mobile](../evidence/requirements-regression-buyer-account-mobile.png)
 
 ยอด Admin ในภาพ ฿502 มาจากสองออเดอร์ที่ทดสอบจริงสะสมจากการ rerun; seller ใหม่เห็นเพียง ฿251 ของตน ภาพไม่ได้ใช้ค่าจำลอง hardcode
 

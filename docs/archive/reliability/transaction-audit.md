@@ -1,3 +1,5 @@
+> หลักฐานต้นฉบับย้อนหลัง: ไม่ใช่ผลทดสอบรอบปัจจุบัน โปรดใช้ [Final Project Documentation v1.0](../../README.md)
+
 # Phase 2 — Transaction integrity
 
 Base main 05d9165. Confirmed: numeric(10,2) aggregate overflow not validated (SQLite reproduced 201 for 199999999.98; PostgreSQL would reject storage); cart update/delete did not participate in checkout locks and did not recheck buyer role; seller order lines used mutable product names; payment audit hidden even from Admin.
