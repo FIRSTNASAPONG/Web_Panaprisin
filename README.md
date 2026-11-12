@@ -2,7 +2,7 @@
 
 เว็บไซต์ E-commerce สำหรับซื้อขายของเก่าและของสะสม พัฒนาด้วย **Next.js 15**, **React 19**, **TypeScript**, **Laravel 13** และ **PostgreSQL 17** ใช้ Docker Compose สำหรับการพัฒนาและ Deploy บน Azure VM ผ่าน GitHub Actions และ GitHub Container Registry (GHCR)
 
-- เว็บไซต์สาธิต: https://panaprisin.me
+- เว็บไซต์สาธิต: https://panaprisin.me (ตอนนี้ Shutdown server ไปแล้วครับ)
 - Source code: https://github.com/FIRSTNASAPONG/Web_Panaprisin
 - รายละเอียดเทคโนโลยี: [Techstack.md](./Techstack.md)
 
